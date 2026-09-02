@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mock</title>
+<style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  #canvas {
+    position: absolute;
+    inset: 0;
+    background-color: #fff;
+    background-image: radial-gradient(#000 1px, transparent 1px);
+    background-size: 24px 24px;
+    background-position: 0px 0px;
+    cursor: grab;
+  }
+
+  #canvas.dragging {
+    cursor: grabbing;
+  }
+
+  #vignette {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(circle at center, rgba(255,255,255,0) 45%, rgba(255,255,255,1) 100%);
+  }
+
+  h1 {
+    position: fixed;
+    z-index: 100;
+    margin-left: 16px;
+  }
+
+  #content {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  #edges {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+    pointer-events: none;
+  }
+
+  .node-wrapper {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+  }
+
+  .theme-wrapper {
+    width: 400px;
+    height: 280px;
+    --btn-offset: 100px;
+  }
+
+  .idea-wrapper {
+    width: 300px;
+    height: 180px;
+    --btn-offset: 55px;
+  }
+
+  .cloud-node {
+    position: relative;
+    width: 280px;
+    height: 170px;
+  }
+
+  .cloud-node svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .cloud-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 55px;
+    font-family: sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+    color: #000;
+    outline: none;
+    cursor: text;
+  }
+
+  .idea-node {
+    position: relative;
+    width: 200px;
+    height: 56px;
+    background: #fff;
+    border: 1.5px solid #000;
+    border-radius: 28px;
+  }
+
+  .idea-text {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 0 20px;
+    font-family: sans-serif;
+    font-size: 14px;
+    color: #000;
+    outline: none;
+    cursor: text;
+  }
+
+  .cloud-text:empty::before,
+  .idea-text:empty::before {
+    content: attr(data-placeholder);
+    color: #aaa;
+  }
+
+  .add-btn {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, var(--btn-offset));
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid #000;
+    background: #fff;
+    color: #000;
+    font-size: 18px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  }
+
+  .node-wrapper:hover .add-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .add-btn:hover {
+    background: #000;
+    color: #fff;
+    transform: translate(-50%, var(--btn-offset)) scale(1.15);
+  }
+</style>
+</head>
+<body>
+  <h1>BrainStorming withAI</h1>
+  <div id="canvas"></div>
+  <div id="content">
+    <svg id="edges"></svg>
+  </div>
+  <div id="vignette"></div>
+
+  <script>
+    const canvas = document.getElementById('canvas');
+    const content = document.getElementById('content');
+    const edges = document.getElementById('edges');
+
+    // --- pan ---
+    let offsetX = 0;
+    let offsetY = 0;
+    let dragging = false;
+    let startX = 0;
+    let startY = 0;
+
+    canvas.addEventListener('mousedown', (e) => {
+      dragging = true;
+      canvas.classList.add('dragging');
+      startX = e.clientX;
+      startY = e.clientY;
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      canvas.style.backgroundPosition = `${offsetX + dx}px ${offsetY + dy}px`;
+      content.style.transform = `translate(${offsetX + dx}px, ${offsetY + dy}px)`;
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (!dragging) return;
+      dragging = false;
+      canvas.classList.remove('dragging');
+      offsetX += e.clientX - startX;
+      offsetY += e.clientY - startY;
+    });
+
+    // --- nodes ---
+    function createNode(type, x, y, parentWrapper) {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'node-wrapper ' + (type === 'theme' ? 'theme-wrapper' : 'idea-wrapper');
+      wrapper.style.left = x + 'px';
+      wrapper.style.top = y + 'px';
+      wrapper.dataset.x = x;
+      wrapper.dataset.y = y;
+      wrapper.dataset.count = 0;
+
+      const shape = document.createElement('div');
+      if (type === 'theme') {
+        shape.className = 'cloud-node';
+        shape.innerHTML =
+          '<svg viewBox="0 0 24 24" fill="none">' +
+          '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>' +
+          '</svg>' +
+          '<div class="cloud-text" contenteditable="true" data-placeholder="enter main theme"></div>';
+      } else {
+        shape.className = 'idea-node';
+        shape.innerHTML = '<div class="idea-text" contenteditable="true" data-placeholder="enter new idea"></div>';
+      }
+
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add-btn';
+      addBtn.setAttribute('aria-label', 'add node');
+      addBtn.textContent = '+';
+      addBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        spawnChild(wrapper);
+      });
+
+      wrapper.appendChild(shape);
+      wrapper.appendChild(addBtn);
+      content.appendChild(wrapper);
+
+      if (parentWrapper) {
+        drawEdge(parentWrapper, wrapper);
+      }
+
+      return wrapper;
+    }
+
+    function spawnChild(parentWrapper) {
+      const px = parseFloat(parentWrapper.dataset.x);
+      const py = parseFloat(parentWrapper.dataset.y);
+      const index = parseInt(parentWrapper.dataset.count, 10);
+      parentWrapper.dataset.count = index + 1;
+
+      // deterministic fan-out layout below the parent node, ring by ring
+      const perRing = 5;
+      const ring = Math.floor(index / perRing);
+      const posInRing = index % perRing;
+      const spread = 150;
+      const startAngle = 90 - spread / 2;
+      const step = perRing > 1 ? spread / (perRing - 1) : 0;
+      const angleDeg = startAngle + posInRing * step;
+      const angleRad = (angleDeg * Math.PI) / 180;
+      const radius = 240 + ring * 140;
+
+      const nx = px + radius * Math.cos(angleRad);
+      const ny = py + radius * Math.sin(angleRad);
+
+      createNode('idea', nx, ny, parentWrapper);
+    }
+
+    function drawEdge(parentWrapper, childWrapper) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', parentWrapper.dataset.x);
+      line.setAttribute('y1', parentWrapper.dataset.y);
+      line.setAttribute('x2', childWrapper.dataset.x);
+      line.setAttribute('y2', childWrapper.dataset.y);
+      line.setAttribute('stroke', '#000');
+      line.setAttribute('stroke-width', '1.5');
+      edges.appendChild(line);
+    }
+
+    createNode('theme', window.innerWidth / 2, window.innerHeight / 2, null);
+  </script>
+</body>
+</html>
