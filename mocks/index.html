@@ -3,29 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mock</title>
+<title>BrainStorming with AI - Mock</title>
 <style>
+  /* ============================================================
+     6. デザインガイドライン
+       - 基本カラーセット: モノクロ
+       - AI関連: ビビッド・サイバーカラー
+       - グループ: パステル
+       - 領域は境界線ではなくマージンで仮想的に分割する
+     ============================================================ */
+  :root {
+    --mono-fg: #000;
+    --mono-bg: #fff;
+    --mono-sub: #8a8a8a;
+    --mono-weak: #c9c9c9;
+
+    --ai-cyan: #00e5ff;
+    --ai-magenta: #ff2d95;
+
+    --pastel-1: #ffd9e1;
+    --pastel-2: #d5ecff;
+    --pastel-3: #dff5d8;
+    --pastel-4: #fff2c9;
+    --pastel-5: #e8ddf7;
+
+    --gap: 28px;
+  }
+
   html, body {
     margin: 0;
     padding: 0;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #fff;
+    background: var(--mono-bg);
+    font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
+    color: var(--mono-fg);
+    user-select: none;
   }
 
+  /* --- 背景（シート） --- */
   #canvas {
     position: absolute;
     inset: 0;
-    background-color: #fff;
+    background-color: var(--mono-bg);
     background-image: radial-gradient(#000 1px, transparent 1px);
     background-size: 24px 24px;
-    background-position: 0px 0px;
-    cursor: grab;
-  }
-
-  #canvas.dragging {
-    cursor: grabbing;
+    background-position: 0 0;
   }
 
   #vignette {
@@ -33,30 +57,27 @@
     inset: 0;
     pointer-events: none;
     background: radial-gradient(circle at center, rgba(255,255,255,0) 45%, rgba(255,255,255,1) 100%);
+    z-index: 5;
   }
 
-  h1 {
-    position: fixed;
-    z-index: 100;
-    margin-left: 16px;
-  }
-
+  /* --- シート内容（パン・ズーム対象） --- */
   #content {
     position: absolute;
-    inset: 0;
+    left: 0; top: 0;
+    width: 0; height: 0;
+    transform-origin: 0 0;
     pointer-events: none;
   }
-
-  #edges {
+  #layer-svg {
     position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
+    left: -20000px; top: -20000px;
+    width: 40000px; height: 40000px;
     overflow: visible;
     pointer-events: none;
   }
 
-  .node-wrapper {
+  /* --- ノード --- */
+  .node {
     position: absolute;
     transform: translate(-50%, -50%);
     display: flex;
@@ -64,234 +85,945 @@
     justify-content: center;
     pointer-events: auto;
   }
-
-  .theme-wrapper {
-    width: 400px;
-    height: 280px;
-    --btn-offset: 100px;
-  }
-
-  .idea-wrapper {
-    width: 300px;
-    height: 180px;
-    --btn-offset: 55px;
-  }
-
-  .cloud-node {
-    position: relative;
-    width: 280px;
-    height: 170px;
-  }
-
-  .cloud-node svg {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-  }
-
-  .cloud-text {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .node .text {
     text-align: center;
-    padding: 0 55px;
-    font-family: sans-serif;
-    font-size: 16px;
     line-height: 1.4;
-    color: #000;
     outline: none;
-    cursor: text;
+    white-space: pre-wrap;
+    word-break: break-word;
   }
-
-  .idea-node {
+  .node .text[contenteditable="true"] { user-select: text; cursor: text; }
+  textarea { user-select: text; }
+  .node.theme .shape {
     position: relative;
-    width: 200px;
-    height: 56px;
-    background: #fff;
-    border: 1.5px solid #000;
-    border-radius: 28px;
-  }
-
-  .idea-text {
-    position: absolute;
-    inset: 0;
+    width: 260px;
+    min-height: 120px;
     display: flex;
     align-items: center;
     justify-content: center;
-    text-align: center;
-    padding: 0 20px;
-    font-family: sans-serif;
-    font-size: 14px;
-    color: #000;
-    outline: none;
-    cursor: text;
+    border: 2px solid var(--mono-fg);
+    border-radius: 70px / 50px;
+    background: var(--mono-bg);
   }
+  .node.theme .text { font-size: 17px; font-weight: 600; padding: 18px 34px; }
 
-  .cloud-text:empty::before,
-  .idea-text:empty::before {
+  .node.idea .shape {
+    position: relative;
+    min-width: 130px;
+    max-width: 230px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1.5px solid var(--mono-fg);
+    border-radius: 26px;
+    background: var(--mono-bg);
+  }
+  .node.idea .text { font-size: 14px; padding: 12px 22px; }
+
+  .node .text:empty::before {
     content: attr(data-placeholder);
-    color: #aaa;
+    color: var(--mono-weak);
   }
+  .node.hit .shape { box-shadow: 0 0 0 5px rgba(0,0,0,0.07); }
+  .node.editing .shape { border-style: dashed; }
 
-  .add-btn {
+  /* 削除モードの長押し進捗 */
+  .node .burn {
     position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, var(--btn-offset));
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    border: 1.5px solid #000;
-    background: #fff;
-    color: #000;
-    font-size: 18px;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
+    inset: -4px;
+    border-radius: inherit;
+    background: var(--mono-fg);
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.15s ease, background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+  }
+  .node.burning .burn { animation: burn 700ms linear forwards; }
+  @keyframes burn { from { opacity: 0; } to { opacity: 0.85; } }
+
+  /* AI提案（ゴースト） */
+  .node.ghost .shape {
+    border-color: var(--ai-cyan);
+    border-style: dashed;
+    box-shadow: 0 0 12px rgba(0,229,255,0.55);
+  }
+  .node.ghost .text { color: #0093a6; }
+  .node.ghost-remove .shape {
+    border-color: var(--ai-magenta);
+    border-style: dashed;
+    opacity: 0.5;
+  }
+  .node.ghost-remove .text { text-decoration: line-through; color: var(--ai-magenta); }
+
+  /* --- グループ --- */
+  .group {
+    position: absolute;
+    border-radius: 22px;
+    pointer-events: none;
+  }
+  .group .label {
+    position: absolute;
+    left: 16px;
+    top: -10px;
+    font-size: 13px;
+    font-weight: 600;
+    background: var(--mono-bg);
+    padding: 0 6px;
+  }
+  .group .comment {
+    position: absolute;
+    left: 16px;
+    bottom: -22px;
+    font-size: 11px;
+    color: var(--mono-sub);
   }
 
-  .node-wrapper:hover .add-btn {
-    opacity: 1;
-    pointer-events: auto;
-  }
+  /* ============================================================
+     UI レイヤ（境界線を持たず、マージンで領域を分割する）
+     ============================================================ */
+  .ui { position: fixed; z-index: 20; }
+  #title, #mode-hud, #toast { pointer-events: none; } /* シート操作を妨げない */
 
-  .add-btn:hover {
-    background: #000;
-    color: #fff;
-    transform: translate(-50%, var(--btn-offset)) scale(1.15);
+  #title {
+    left: var(--gap); top: var(--gap);
+    font-size: 15px; font-weight: 700; letter-spacing: 0.04em;
   }
+  #title span { color: var(--ai-cyan); text-shadow: 0 0 8px rgba(0,229,255,0.5); }
+
+  #mode-hud {
+    left: var(--gap); top: calc(var(--gap) + 34px);
+    font-size: 12px; color: var(--mono-sub);
+  }
+  #mode-hud b { font-size: 20px; color: var(--mono-fg); }
+  #mode-hud .hint { display: block; margin-top: 6px; line-height: 1.7; }
+
+  #toolbar {
+    right: var(--gap); top: var(--gap);
+    display: flex; gap: 18px; font-size: 12px;
+  }
+  .txt-btn {
+    background: none; border: none; padding: 0; margin: 0;
+    font: inherit; color: var(--mono-sub); cursor: pointer;
+  }
+  .txt-btn:hover { color: var(--mono-fg); }
+  .txt-btn:disabled { color: var(--mono-weak); cursor: default; }
+  .txt-btn.ai { color: var(--ai-cyan); }
+
+  /* ノート一覧 */
+  #notes {
+    right: var(--gap); top: calc(var(--gap) + 44px);
+    width: 250px; max-height: 46vh; overflow-y: auto;
+  }
+  #notes h2 { font-size: 11px; color: var(--mono-sub); font-weight: 600; margin: 0 0 12px; }
+  .note { margin-bottom: 20px; }
+  .note .t { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .note .b { font-size: 11px; color: var(--mono-sub); line-height: 1.7; }
+  #notes .empty { font-size: 11px; color: var(--mono-weak); }
+
+  /* ひとりごとメモ */
+  #mutter {
+    left: var(--gap); bottom: var(--gap); width: 320px;
+  }
+  #mutter textarea {
+    width: 100%; height: 62px; resize: none;
+    border: none; outline: none; background: transparent;
+    font: inherit; font-size: 13px; line-height: 1.6; color: var(--mono-fg);
+  }
+  #mutter textarea::placeholder { color: var(--mono-weak); }
+  #mutter .caption { font-size: 11px; color: var(--mono-sub); margin-top: 4px; }
+
+  /* --- ホイールUI（明示的な境界を許可） --- */
+  .wheel { position: fixed; z-index: 40; pointer-events: none; }
+  .wheel .item {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    min-width: 74px;
+    padding: 10px 12px;
+    border-radius: 20px;
+    background: var(--mono-bg);
+    border: 1.5px solid var(--mono-weak);
+    color: var(--mono-sub);
+    font-size: 12px;
+    text-align: center;
+    transition: transform 80ms ease;
+  }
+  .wheel .item.active {
+    border-color: var(--mono-fg);
+    color: var(--mono-fg);
+    font-weight: 600;
+    transform: translate(-50%, -50%) scale(1.12);
+  }
+  .wheel .hub {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    color: var(--mono-weak);
+  }
+  .wheel.ai .item { border-color: rgba(0,229,255,0.45); color: #0093a6; }
+  .wheel.ai .item.active {
+    border-color: var(--ai-cyan);
+    color: var(--mono-fg);
+    box-shadow: 0 0 14px rgba(0,229,255,0.6);
+  }
+  .wheel.ai .hub { color: var(--ai-cyan); }
+
+  /* --- AI提案パネル --- */
+  #proposal {
+    left: 50%; bottom: var(--gap);
+    transform: translateX(-50%);
+    width: 460px;
+    z-index: 30;
+    display: none;
+  }
+  #proposal.show { display: block; }
+  #proposal .head {
+    font-size: 12px; color: var(--ai-cyan); font-weight: 700;
+    letter-spacing: 0.06em; margin-bottom: 10px;
+  }
+  #proposal ol { margin: 0 0 14px; padding-left: 20px; }
+  #proposal li { font-size: 12px; line-height: 1.9; }
+  #proposal .actions { display: flex; gap: 20px; font-size: 12px; }
+  #proposal .commit { color: var(--ai-cyan); font-weight: 700; }
+  #proposal .reject { color: var(--mono-sub); }
+
+  #toast {
+    left: 50%; top: var(--gap);
+    transform: translateX(-50%);
+    font-size: 12px; color: var(--mono-sub);
+    opacity: 0; transition: opacity 200ms ease;
+    z-index: 50;
+  }
+  #toast.show { opacity: 1; }
 </style>
 </head>
 <body>
-  <h1>BrainStorming withAI</h1>
   <div id="canvas"></div>
   <div id="content">
-    <svg id="edges"></svg>
+    <svg id="layer-svg"></svg>
   </div>
   <div id="vignette"></div>
 
-  <script>
-    const canvas = document.getElementById('canvas');
-    const content = document.getElementById('content');
-    const edges = document.getElementById('edges');
+  <div id="title" class="ui">BrainStorming with <span>AI</span></div>
 
-    // --- pan ---
-    let offsetX = 0;
-    let offsetY = 0;
-    let dragging = false;
-    let startX = 0;
-    let startY = 0;
+  <div id="mode-hud" class="ui">
+    MODE <b id="mode-name">view</b>
+    <span class="hint">
+      左クリック: 各モードの操作 / ホイール: モード切替 / Ctrl+ホイール: ズーム<br>
+      右クリック長押し: モードホイール<br>
+      （長押し中）Shift: AIホイール
+    </span>
+  </div>
 
-    canvas.addEventListener('mousedown', (e) => {
-      dragging = true;
-      canvas.classList.add('dragging');
-      startX = e.clientX;
-      startY = e.clientY;
-    });
+  <div id="toolbar" class="ui">
+    <button class="txt-btn" id="btn-undo">元に戻す</button>
+    <button class="txt-btn" id="btn-redo">やり直す</button>
+    <button class="txt-btn" id="btn-save">保存</button>
+    <button class="txt-btn" id="btn-load">読込</button>
+    <button class="txt-btn" id="btn-export">エクスポート</button>
+    <button class="txt-btn" id="btn-import">インポート</button>
+  </div>
 
-    window.addEventListener('mousemove', (e) => {
-      if (!dragging) return;
-      const dx = e.clientX - startX;
-      const dy = e.clientY - startY;
-      canvas.style.backgroundPosition = `${offsetX + dx}px ${offsetY + dy}px`;
-      content.style.transform = `translate(${offsetX + dx}px, ${offsetY + dy}px)`;
-    });
+  <div id="notes" class="ui">
+    <h2>NOTES</h2>
+    <div id="note-list"></div>
+  </div>
 
-    window.addEventListener('mouseup', (e) => {
-      if (!dragging) return;
-      dragging = false;
-      canvas.classList.remove('dragging');
-      offsetX += e.clientX - startX;
-      offsetY += e.clientY - startY;
-    });
+  <div id="mutter" class="ui">
+    <textarea id="mutter-input" placeholder="ひとりごとメモ…"></textarea>
+    <div class="caption">Ctrl + Enter で AI がシートへの反映を提案</div>
+  </div>
 
-    // --- nodes ---
-    function createNode(type, x, y, parentWrapper) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'node-wrapper ' + (type === 'theme' ? 'theme-wrapper' : 'idea-wrapper');
-      wrapper.style.left = x + 'px';
-      wrapper.style.top = y + 'px';
-      wrapper.dataset.x = x;
-      wrapper.dataset.y = y;
-      wrapper.dataset.count = 0;
+  <div id="proposal" class="ui">
+    <div class="head" id="proposal-title">AI PROPOSAL</div>
+    <ol id="proposal-ops"></ol>
+    <div class="actions">
+      <button class="txt-btn commit" id="btn-commit">コミット (Enter)</button>
+      <button class="txt-btn reject" id="btn-reject">却下 (Esc)</button>
+    </div>
+  </div>
 
-      const shape = document.createElement('div');
-      if (type === 'theme') {
-        shape.className = 'cloud-node';
-        shape.innerHTML =
-          '<svg viewBox="0 0 24 24" fill="none">' +
-          '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9z" fill="#fff" stroke="#000" stroke-width="1" stroke-linejoin="round" stroke-linecap="round"/>' +
-          '</svg>' +
-          '<div class="cloud-text" contenteditable="true" data-placeholder="enter main theme"></div>';
-      } else {
-        shape.className = 'idea-node';
-        shape.innerHTML = '<div class="idea-text" contenteditable="true" data-placeholder="enter new idea"></div>';
-      }
+  <div id="toast" class="ui"></div>
 
-      const addBtn = document.createElement('button');
-      addBtn.className = 'add-btn';
-      addBtn.setAttribute('aria-label', 'add node');
-      addBtn.textContent = '+';
-      addBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        spawnChild(wrapper);
-      });
+  <input type="file" id="file-input" accept="application/json" hidden>
 
-      wrapper.appendChild(shape);
-      wrapper.appendChild(addBtn);
-      content.appendChild(wrapper);
+<script>
+/* ============================================================
+   モック実装。仕様書 design-document.md の操作モデル・機能要件を
+   ひと通り触れる範囲で再現する。ロジックは意図的に単純化。
+   ============================================================ */
 
-      if (parentWrapper) {
-        drawEdge(parentWrapper, wrapper);
-      }
+const MODES = ['view', 'add', 'remove', 'edit'];
+const MODE_LABEL = { view: 'ビュー', add: 'ノード追加', remove: 'ノード削除', edit: 'ノード編集' };
+const PASTELS = ['var(--pastel-1)', 'var(--pastel-2)', 'var(--pastel-3)', 'var(--pastel-4)', 'var(--pastel-5)'];
 
-      return wrapper;
+const AI_ACTIONS = [
+  { key: 'expand',  label: '深掘り' },
+  { key: 'newview', label: '新視点' },
+  { key: 'link',    label: '関連付け' },
+  { key: 'merge',   label: '統合' },
+  { key: 'group',   label: 'グループ化' },
+  { key: 'note',    label: 'ノート生成' },
+];
+
+// --- 状態 ---
+let state = {
+  nodes: [{ id: 'n0', kind: 'theme', text: '', parent: null, x: 0, y: 0 }],
+  links: [],   // 間接エッジ {a, b}
+  groups: [],  // {id, members:[nodeId], title, comment, color}
+  notes: [],   // {id, title, body}
+};
+let camera = { x: window.innerWidth / 2, y: window.innerHeight / 2, k: 1 };
+let mode = 'view';
+let hoverId = null;
+let editingId = null;
+let proposal = null;
+let seq = 1;
+
+const past = [];
+const future = [];
+
+const el = {
+  canvas: document.getElementById('canvas'),
+  content: document.getElementById('content'),
+  svg: document.getElementById('layer-svg'),
+  modeName: document.getElementById('mode-name'),
+  noteList: document.getElementById('note-list'),
+  proposal: document.getElementById('proposal'),
+  proposalTitle: document.getElementById('proposal-title'),
+  proposalOps: document.getElementById('proposal-ops'),
+  toast: document.getElementById('toast'),
+  file: document.getElementById('file-input'),
+};
+
+const uid = (p) => p + (seq++);
+// 読込・インポート時のID重複を避けるため、採番カウンタを進める
+const bumpSeq = () => { seq += state.nodes.length + state.groups.length + state.notes.length + 1; };
+const nodeById = (id) => state.nodes.find((n) => n.id === id);
+const childrenOf = (id) => state.nodes.filter((n) => n.parent === id);
+
+function toast(msg) {
+  el.toast.textContent = msg;
+  el.toast.classList.add('show');
+  clearTimeout(toast.timer);
+  toast.timer = setTimeout(() => el.toast.classList.remove('show'), 1800);
+}
+
+/* --- 4.3 変更履歴（Undo / Redo） --- */
+function snapshot() {
+  past.push(JSON.stringify(state));
+  if (past.length > 30) past.shift();
+  future.length = 0;
+  syncToolbar();
+}
+function undo() {
+  if (!past.length) return;
+  future.push(JSON.stringify(state));
+  state = JSON.parse(past.pop());
+  render();
+  syncToolbar();
+  toast('元に戻しました');
+}
+function redo() {
+  if (!future.length) return;
+  past.push(JSON.stringify(state));
+  state = JSON.parse(future.pop());
+  render();
+  syncToolbar();
+  toast('やり直しました');
+}
+function syncToolbar() {
+  document.getElementById('btn-undo').disabled = past.length === 0;
+  document.getElementById('btn-redo').disabled = future.length === 0;
+}
+
+/* --- 座標変換 --- */
+const toWorld = (sx, sy) => ({ x: (sx - camera.x) / camera.k, y: (sy - camera.y) / camera.k });
+
+function applyCamera() {
+  el.content.style.transform = `translate(${camera.x}px, ${camera.y}px) scale(${camera.k})`;
+  el.canvas.style.backgroundPosition = `${camera.x}px ${camera.y}px`;
+  el.canvas.style.backgroundSize = `${24 * camera.k}px ${24 * camera.k}px`;
+}
+
+/* --- ノード操作（4.1 シート編集） --- */
+function placeChild(parent) {
+  const index = childrenOf(parent.id).length;
+  const gp = parent.parent ? nodeById(parent.parent) : null;
+  const base = gp ? Math.atan2(parent.y - gp.y, parent.x - gp.x) : Math.PI / 2;
+  const spread = gp ? Math.PI * 0.7 : Math.PI * 1.6;
+  const slot = index % 5;
+  const ring = Math.floor(index / 5);
+  const angle = base - spread / 2 + (spread / 4) * slot;
+  const radius = (parent.kind === 'theme' ? 300 : 240) + ring * 130;
+  return { x: parent.x + Math.cos(angle) * radius, y: parent.y + Math.sin(angle) * radius };
+}
+
+function addChild(parentId, text) {
+  const parent = nodeById(parentId);
+  if (!parent) return null;
+  const pos = placeChild(parent);
+  const node = { id: uid('n'), kind: 'idea', text: text || '', parent: parentId, x: pos.x, y: pos.y };
+  state.nodes.push(node);
+  return node;
+}
+
+function removeNode(id) {
+  const target = nodeById(id);
+  if (!target) return;
+  if (!target.parent) { toast('メインテーマノードは削除できません'); return; }
+  // 木構造を保つため、部分木ごと削除する
+  const doomed = new Set();
+  const walk = (nid) => { doomed.add(nid); childrenOf(nid).forEach((c) => walk(c.id)); };
+  walk(id);
+  state.nodes = state.nodes.filter((n) => !doomed.has(n.id));
+  state.links = state.links.filter((l) => !doomed.has(l.a) && !doomed.has(l.b));
+  state.groups.forEach((g) => { g.members = g.members.filter((m) => !doomed.has(m)); });
+  state.groups = state.groups.filter((g) => g.members.length > 1);
+}
+
+/* ============================================================
+   描画
+   ============================================================ */
+function render() {
+  if (editingId) return; // 編集中は再描画しない（モック簡略化）
+  el.content.querySelectorAll('.node, .group').forEach((n) => n.remove());
+  el.svg.innerHTML = '';
+
+  state.groups.forEach(renderGroup);
+  state.nodes.forEach((n) => renderNode(n, null));
+  state.nodes.forEach((n) => { if (n.parent) drawEdge(nodeById(n.parent), n, 'direct'); });
+  state.links.forEach((l) => drawEdge(nodeById(l.a), nodeById(l.b), 'indirect'));
+
+  if (proposal) renderProposal();
+  renderNotes();
+}
+
+function renderNode(n, ghost) {
+  const box = document.createElement('div');
+  box.className = 'node ' + n.kind + (ghost ? ' ' + ghost : '');
+  box.style.left = n.x + 'px';
+  box.style.top = n.y + 'px';
+  box.dataset.id = n.id;
+
+  const shape = document.createElement('div');
+  shape.className = 'shape';
+
+  const text = document.createElement('div');
+  text.className = 'text';
+  text.textContent = n.text;
+  text.dataset.placeholder = n.kind === 'theme' ? 'メインテーマを入力' : 'アイデアを入力';
+
+  const burn = document.createElement('div');
+  burn.className = 'burn';
+
+  shape.appendChild(text);
+  shape.appendChild(burn);
+  box.appendChild(shape);
+
+  if (!ghost) {
+    box.addEventListener('mouseenter', () => { hoverId = n.id; box.classList.add('hit'); });
+    box.addEventListener('mouseleave', () => { if (hoverId === n.id) hoverId = null; box.classList.remove('hit'); });
+  }
+  el.content.appendChild(box);
+  return box;
+}
+
+function renderGroup(g) {
+  const members = g.members.map(nodeById).filter(Boolean);
+  if (members.length < 2) return;
+  const pad = 90;
+  const xs = members.map((m) => m.x);
+  const ys = members.map((m) => m.y);
+  const box = document.createElement('div');
+  box.className = 'group';
+  box.style.left = (Math.min(...xs) - pad) + 'px';
+  box.style.top = (Math.min(...ys) - pad * 0.7) + 'px';
+  box.style.width = (Math.max(...xs) - Math.min(...xs) + pad * 2) + 'px';
+  box.style.height = (Math.max(...ys) - Math.min(...ys) + pad * 1.4) + 'px';
+  box.style.background = g.color;
+  box.innerHTML = `<div class="label">${g.title}</div><div class="comment">${g.comment}</div>`;
+  el.content.prepend(box); // ノード・エッジより背面に置く
+}
+
+function drawEdge(a, b, type) {
+  if (!a || !b) return;
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', a.x + 20000);
+  line.setAttribute('y1', a.y + 20000);
+  line.setAttribute('x2', b.x + 20000);
+  line.setAttribute('y2', b.y + 20000);
+  if (type === 'direct') {
+    line.setAttribute('stroke', '#000');
+    line.setAttribute('stroke-width', '1.5');
+  } else if (type === 'indirect') {
+    line.setAttribute('stroke', '#9b9b9b');
+    line.setAttribute('stroke-width', '1.2');
+    line.setAttribute('stroke-dasharray', '6 6');
+  } else {
+    line.setAttribute('stroke', '#00e5ff');
+    line.setAttribute('stroke-width', '1.6');
+    line.setAttribute('stroke-dasharray', '4 6');
+  }
+  el.svg.appendChild(line);
+}
+
+function renderNotes() {
+  if (!state.notes.length) {
+    el.noteList.innerHTML = '<div class="empty">ノートはまだありません</div>';
+    return;
+  }
+  el.noteList.innerHTML = state.notes.map((n) =>
+    `<div class="note"><div class="t">${n.title}</div><div class="b">${n.body}</div></div>`
+  ).join('');
+}
+
+/* ============================================================
+   4.1 物理操作
+   ============================================================ */
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+// --- 左ドラッグでパン（view モード） ---
+let panning = null;
+el.canvas.addEventListener('mousedown', (e) => {
+  if (e.button !== 0 || mode !== 'view' || wheelUI.open) return;
+  panning = { sx: e.clientX, sy: e.clientY, ox: camera.x, oy: camera.y };
+  el.canvas.style.cursor = 'grabbing';
+});
+window.addEventListener('mousemove', (e) => {
+  cursor.x = e.clientX;
+  cursor.y = e.clientY;
+  if (panning) {
+    camera.x = panning.ox + (e.clientX - panning.sx);
+    camera.y = panning.oy + (e.clientY - panning.sy);
+    applyCamera();
+  }
+  if (wheelUI.open && wheelUI.interactive) updateWheelActive();
+});
+window.addEventListener('mouseup', () => {
+  if (panning) el.canvas.style.cursor = 'grab';
+  panning = null;
+  cancelBurn();
+});
+
+// --- ホイール: モード切替 / Ctrl+ホイール: ズーム ---
+window.addEventListener('wheel', (e) => {
+  if (e.target.closest('.ui')) return; // UI領域は通常のスクロールを残す
+  e.preventDefault();
+  if (e.ctrlKey) {
+    const before = toWorld(e.clientX, e.clientY);
+    camera.k = Math.min(2.5, Math.max(0.25, camera.k * (e.deltaY < 0 ? 1.12 : 1 / 1.12)));
+    camera.x = e.clientX - before.x * camera.k;
+    camera.y = e.clientY - before.y * camera.k;
+    applyCamera();
+    return;
+  }
+  const dir = e.deltaY > 0 ? 1 : -1;
+  setMode(MODES[(MODES.indexOf(mode) + dir + MODES.length) % MODES.length]);
+  cursor.x = e.clientX;
+  cursor.y = e.clientY;
+  flashModeWheel();
+}, { passive: false });
+
+function setMode(next) {
+  mode = next;
+  el.modeName.textContent = next;
+  el.canvas.style.cursor = next === 'view' ? 'grab' : 'crosshair';
+}
+
+// --- モードごとの左クリック操作 ---
+let burnTimer = null;
+let burningEl = null;
+
+el.content.addEventListener('mousedown', (e) => {
+  const box = e.target.closest('.node');
+  if (!box || e.button !== 0) return;
+  if (wheelUI.open) return; // ホイール表示中の左クリックは無視（右クリック長押し中の操作を優先）
+  const id = box.dataset.id;
+  e.stopPropagation();
+
+  if (mode === 'add') {
+    snapshot();
+    const child = addChild(id, '');
+    render();
+    if (child) startEdit(child.id);
+    return;
+  }
+  if (mode === 'edit') {
+    startEdit(id);
+    return;
+  }
+  if (mode === 'remove') {
+    if (!nodeById(id).parent) { toast('メインテーマノードは削除できません'); return; }
+    // 一定時間の長押しで削除
+    burningEl = box;
+    box.classList.add('burning');
+    burnTimer = setTimeout(() => {
+      snapshot();
+      removeNode(id);
+      render();
+      toast('ノードを削除しました');
+    }, 700);
+  }
+});
+function cancelBurn() {
+  clearTimeout(burnTimer);
+  if (burningEl) burningEl.classList.remove('burning');
+  burningEl = null;
+}
+
+// --- インライン編集 ---
+function startEdit(id) {
+  const box = el.content.querySelector(`.node[data-id="${id}"]`);
+  if (!box) return;
+  const text = box.querySelector('.text');
+  editingId = id;
+  box.classList.add('editing');
+  text.contentEditable = 'true';
+  text.focus();
+  document.getSelection().selectAllChildren(text);
+
+  const finish = () => {
+    text.contentEditable = 'false';
+    box.classList.remove('editing');
+    editingId = null;
+    const node = nodeById(id);
+    const value = text.textContent.trim();
+    if (node && node.text !== value) { snapshot(); node.text = value; }
+    render();
+  };
+  text.addEventListener('blur', finish, { once: true });
+  text.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); text.blur(); }
+    if (ev.key === 'Escape') { text.textContent = nodeById(id).text; text.blur(); }
+  });
+}
+
+/* ============================================================
+   ホイールUI（モードホイール / AI機能ショートカットホイール）
+   ============================================================ */
+const cursor = { x: 0, y: 0 };
+const wheelUI = { open: null, root: null, items: [], center: { x: 0, y: 0 }, active: 0, interactive: false };
+let flashTimer = null;
+
+// interactive:false の場合、マウス移動では選択が変わらない一時表示（マウスホイール操作時のフィードバック用）
+function openWheel(kind, entries, interactive = true) {
+  clearTimeout(flashTimer);
+  closeWheel();
+  const root = document.createElement('div');
+  root.className = 'wheel' + (kind === 'ai' ? ' ai' : '');
+  const center = { x: cursor.x, y: cursor.y };
+  const radius = kind === 'ai' ? 150 : 118;
+
+  const hub = document.createElement('div');
+  hub.className = 'hub';
+  hub.style.left = center.x + 'px';
+  hub.style.top = center.y + 'px';
+  hub.textContent = kind === 'ai' ? 'AI' : 'MODE';
+  root.appendChild(hub);
+
+  const items = entries.map((entry, i) => {
+    const angle = (-Math.PI / 2) + (i / entries.length) * Math.PI * 2;
+    const item = document.createElement('div');
+    item.className = 'item';
+    item.style.left = (center.x + Math.cos(angle) * radius) + 'px';
+    item.style.top = (center.y + Math.sin(angle) * radius) + 'px';
+    item.textContent = entry.label;
+    root.appendChild(item);
+    return { el: item, angle, entry };
+  });
+
+  document.body.appendChild(root);
+  wheelUI.open = kind;
+  wheelUI.root = root;
+  wheelUI.items = items;
+  wheelUI.center = center;
+  wheelUI.active = 0;
+  wheelUI.interactive = interactive;
+  if (interactive) updateWheelActive();
+}
+
+function setActiveWheelItem(index) {
+  wheelUI.active = index;
+  wheelUI.items.forEach((it, i) => it.el.classList.toggle('active', i === index));
+}
+
+// マウスホイールでのモード切替時に、現在のモードをホイールUIで一瞬示す
+function flashModeWheel() {
+  if (rightHeld) return; // 対話的なホイール表示中は上書きしない
+  openWheel('mode', MODES.map((m) => ({ label: MODE_LABEL[m], value: m })), false);
+  setActiveWheelItem(MODES.indexOf(mode));
+  flashTimer = setTimeout(closeWheel, 700);
+}
+
+function updateWheelActive() {
+  const dx = cursor.x - wheelUI.center.x;
+  const dy = cursor.y - wheelUI.center.y;
+  if (Math.hypot(dx, dy) < 30) return; // 中心付近は選択を変えない
+  const angle = Math.atan2(dy, dx);
+  let best = 0;
+  let bestDiff = Infinity;
+  wheelUI.items.forEach((it, i) => {
+    const diff = Math.abs(((angle - it.angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+    if (diff < bestDiff) { bestDiff = diff; best = i; }
+  });
+  wheelUI.active = best;
+  wheelUI.items.forEach((it, i) => it.el.classList.toggle('active', i === best));
+}
+
+function closeWheel() {
+  if (wheelUI.root) wheelUI.root.remove();
+  wheelUI.open = null;
+  wheelUI.root = null;
+  wheelUI.items = [];
+}
+
+// 右クリック長押し → モードホイール表示、離すと確定
+let rightHeld = false;
+
+window.addEventListener('mousedown', (e) => {
+  if (e.button !== 2 || rightHeld || editingId || e.target.closest('.ui')) return;
+  rightHeld = true;
+  aiTargetId = hoverId; // AIホイールに切り替わった場合の対象ノードとして先に確定しておく
+  openWheel('mode', MODES.map((m) => ({ label: MODE_LABEL[m], value: m })));
+});
+
+window.addEventListener('mouseup', (e) => {
+  if (e.button !== 2 || !rightHeld) return;
+  rightHeld = false;
+  const kind = wheelUI.open;
+  const active = wheelUI.items[wheelUI.active];
+  closeWheel();
+  if (!active) return;
+  if (kind === 'mode') setMode(active.entry.value);
+  if (kind === 'ai') runAI(active.entry.value);
+});
+
+// 右クリック長押し中の Shift → AIホイールに切り替え、離すとモードホイールに戻る
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Shift' || e.repeat || !rightHeld || wheelUI.open !== 'mode') return;
+  aiTargetId = hoverId;
+  openWheel('ai', AI_ACTIONS.map((a) => ({ label: a.label, value: a.key })));
+});
+window.addEventListener('keyup', (e) => {
+  if (e.key !== 'Shift' || !rightHeld || wheelUI.open !== 'ai') return;
+  openWheel('mode', MODES.map((m) => ({ label: MODE_LABEL[m], value: m })));
+});
+
+/* ============================================================
+   4.2 / 4.4 / 4.5 AI によるトランザクション提案
+   ============================================================ */
+const SAMPLE_IDEAS = [
+  '導線を1画面にまとめる', '初回オンボーディングを短縮', 'ショートカット中心の操作',
+  'オフラインでも使える', '手戻りしやすい履歴', '声で入力する', 'テンプレートから始める',
+  '成果物を自動で要約', '迷ったら他人の事例を見る', '目的を毎回思い出させる',
+];
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+let aiTargetId = null;
+
+function targetNode() {
+  return nodeById(aiTargetId) || nodeById(hoverId) || state.nodes[0];
+}
+
+function runAI(action) {
+  const target = targetNode();
+  const ops = [];
+  const ghosts = [];
+  const removes = [];
+  let title = 'AI PROPOSAL';
+
+  if (action === 'expand') {
+    title = `AI 深掘り: 「${target.text || '無題'}」`;
+    for (let i = 0; i < 3; i++) {
+      const pos = placeChild(target);
+      const node = { id: uid('g'), kind: 'idea', text: pick(SAMPLE_IDEAS), parent: target.id, x: pos.x + i * 30, y: pos.y + i * 95 };
+      ghosts.push(node);
+      ops.push(`「${target.text || '無題'}」に子ノード「${node.text}」を追加`);
     }
-
-    function spawnChild(parentWrapper) {
-      const px = parseFloat(parentWrapper.dataset.x);
-      const py = parseFloat(parentWrapper.dataset.y);
-      const index = parseInt(parentWrapper.dataset.count, 10);
-      parentWrapper.dataset.count = index + 1;
-
-      // deterministic fan-out layout below the parent node, ring by ring
-      const perRing = 5;
-      const ring = Math.floor(index / perRing);
-      const posInRing = index % perRing;
-      const spread = 150;
-      const startAngle = 90 - spread / 2;
-      const step = perRing > 1 ? spread / (perRing - 1) : 0;
-      const angleDeg = startAngle + posInRing * step;
-      const angleRad = (angleDeg * Math.PI) / 180;
-      const radius = 240 + ring * 140;
-
-      const nx = px + radius * Math.cos(angleRad);
-      const ny = py + radius * Math.sin(angleRad);
-
-      createNode('idea', nx, ny, parentWrapper);
+  } else if (action === 'newview') {
+    title = 'AI 新視点';
+    const root = state.nodes[0];
+    for (let i = 0; i < 2; i++) {
+      const pos = placeChild(root);
+      const node = { id: uid('g'), kind: 'idea', text: pick(SAMPLE_IDEAS), parent: root.id, x: pos.x - 120 + i * 240, y: pos.y - 260 };
+      ghosts.push(node);
+      ops.push(`新しい視点のノード「${node.text}」をメインテーマ直下に追加`);
     }
+  } else if (action === 'link') {
+    title = 'AI 関連付け';
+    const cands = state.nodes.filter((n) => n.id !== target.id);
+    if (!cands.length) return toast('関連付けできるノードがありません');
+    const other = pick(cands);
+    ops.push(`「${target.text || '無題'}」と「${other.text || '無題'}」を間接エッジで接続`);
+    proposal = { title, ops, ghosts, removes, links: [{ a: target.id, b: other.id }] };
+    return showProposal();
+  } else if (action === 'merge') {
+    title = 'AI ノード統合';
+    const siblings = childrenOf(target.parent || target.id).filter((n) => n.id !== target.id);
+    if (siblings.length < 1) return toast('統合できる兄弟ノードがありません');
+    const other = siblings[0];
+    const merged = { id: uid('g'), kind: 'idea', text: `${target.text || '無題'} / ${other.text || '無題'}`, parent: target.parent || target.id, x: (target.x + other.x) / 2, y: (target.y + other.y) / 2 };
+    ghosts.push(merged);
+    removes.push(target.id, other.id);
+    ops.push(`「${target.text || '無題'}」と「${other.text || '無題'}」を1ノードに統合`);
+    proposal = { title, ops, ghosts, removes, merge: true };
+    return showProposal();
+  } else if (action === 'group') {
+    title = 'AI グループ化';
+    const members = [target.id, ...childrenOf(target.id).map((n) => n.id)];
+    if (members.length < 2) return toast('グループ化できるノードがありません');
+    ops.push(`${members.length}件のノードをグループ「${target.text || '無題'}まわり」にまとめる`);
+    proposal = {
+      title, ops, ghosts, removes,
+      group: { id: uid('gr'), members, title: (target.text || '無題') + 'まわり', comment: 'AIが意味的な近さで抽出', color: PASTELS[state.groups.length % PASTELS.length] },
+    };
+    return showProposal();
+  } else if (action === 'note') {
+    title = 'AI ノート生成';
+    const body = state.nodes.filter((n) => n.text).slice(0, 6).map((n) => n.text).join('、') || 'まだアイデアがありません';
+    ops.push('シートの要約をノートとして追加');
+    proposal = { title, ops, ghosts, removes, note: { id: uid('note'), title: (state.nodes[0].text || 'ブレスト') + ' の要約', body } };
+    return showProposal();
+  }
 
-    function drawEdge(parentWrapper, childWrapper) {
-      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      line.setAttribute('x1', parentWrapper.dataset.x);
-      line.setAttribute('y1', parentWrapper.dataset.y);
-      line.setAttribute('x2', childWrapper.dataset.x);
-      line.setAttribute('y2', childWrapper.dataset.y);
-      line.setAttribute('stroke', '#000');
-      line.setAttribute('stroke-width', '1.5');
-      edges.appendChild(line);
+  proposal = { title, ops, ghosts, removes };
+  showProposal();
+}
+
+function showProposal() {
+  el.proposalTitle.textContent = proposal.title;
+  el.proposalOps.innerHTML = proposal.ops.map((o) => `<li>${o}</li>`).join('');
+  el.proposal.classList.add('show');
+  render();
+}
+
+function renderProposal() {
+  proposal.removes.forEach((id) => {
+    const box = el.content.querySelector(`.node[data-id="${id}"]`);
+    if (box) box.classList.add('ghost-remove');
+  });
+  proposal.ghosts.forEach((n) => {
+    renderNode(n, 'ghost');
+    if (n.parent) drawEdge(nodeById(n.parent), n, 'ai');
+  });
+  if (proposal.links) {
+    proposal.links.forEach((l) => drawEdge(nodeById(l.a), nodeById(l.b), 'ai'));
+  }
+  if (proposal.group) {
+    const g = { ...proposal.group };
+    renderGroup(g);
+  }
+}
+
+function commitProposal() {
+  if (!proposal) return;
+  snapshot();
+  proposal.ghosts.forEach((n) => state.nodes.push({ ...n }));
+  (proposal.removes || []).forEach((id) => {
+    // 統合時は子を統合先へ付け替えてから削除する
+    const merged = proposal.ghosts[0];
+    if (proposal.merge && merged) {
+      childrenOf(id).forEach((c) => { c.parent = merged.id; });
     }
+    const node = nodeById(id);
+    if (node && node.parent) {
+      state.nodes = state.nodes.filter((n) => n.id !== id);
+      state.links = state.links.filter((l) => l.a !== id && l.b !== id);
+    }
+  });
+  if (proposal.links) state.links.push(...proposal.links);
+  if (proposal.group) state.groups.push(proposal.group);
+  if (proposal.note) state.notes.unshift(proposal.note);
+  proposal = null;
+  el.proposal.classList.remove('show');
+  render();
+  toast('AIの提案をコミットしました');
+}
 
-    createNode('theme', window.innerWidth / 2, window.innerHeight / 2, null);
-  </script>
+function rejectProposal() {
+  if (!proposal) return;
+  proposal = null;
+  el.proposal.classList.remove('show');
+  render();
+  toast('AIの提案を却下しました');
+}
+
+document.getElementById('btn-commit').addEventListener('click', commitProposal);
+document.getElementById('btn-reject').addEventListener('click', rejectProposal);
+
+/* ============================================================
+   4.6 ひとりごとメモ
+   ============================================================ */
+const mutter = document.getElementById('mutter-input');
+mutter.addEventListener('keydown', (e) => {
+  if (!(e.key === 'Enter' && e.ctrlKey)) return;
+  e.preventDefault();
+  const text = mutter.value.trim();
+  if (!text) return;
+  mutter.value = '';
+  const root = state.nodes[0];
+  const pos = placeChild(root);
+  const head = text.length > 18 ? text.slice(0, 18) + '…' : text;
+  proposal = {
+    title: 'AI ひとりごとメモの反映',
+    ops: [`メモから新しいノード「${head}」を追加`, 'メモ本文をノートとして保存'],
+    ghosts: [{ id: uid('g'), kind: 'idea', text: head, parent: root.id, x: pos.x, y: pos.y }],
+    removes: [],
+    note: { id: uid('note'), title: 'ひとりごとメモ', body: text },
+  };
+  showProposal();
+});
+
+/* ============================================================
+   4.7 保存 / 読込・エクスポート / インポート
+   ============================================================ */
+document.getElementById('btn-save').addEventListener('click', () => {
+  localStorage.setItem('bs-mock-sheet', JSON.stringify(state));
+  toast('シートを保存しました');
+});
+document.getElementById('btn-load').addEventListener('click', () => {
+  const raw = localStorage.getItem('bs-mock-sheet');
+  if (!raw) return toast('保存されたシートがありません');
+  snapshot();
+  state = JSON.parse(raw);
+  bumpSeq();
+  render();
+  toast('シートを読み込みました');
+});
+document.getElementById('btn-export').addEventListener('click', () => {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'brainstorm-sheet.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+document.getElementById('btn-import').addEventListener('click', () => el.file.click());
+el.file.addEventListener('change', async () => {
+  const file = el.file.files[0];
+  if (!file) return;
+  snapshot();
+  state = JSON.parse(await file.text());
+  bumpSeq();
+  el.file.value = '';
+  render();
+  toast('シートをインポートしました');
+});
+
+document.getElementById('btn-undo').addEventListener('click', undo);
+document.getElementById('btn-redo').addEventListener('click', redo);
+
+window.addEventListener('keydown', (e) => {
+  if (editingId || e.target.tagName === 'TEXTAREA') return;
+  if (e.key === 'Escape') { rejectProposal(); closeWheel(); }
+  if (e.key === 'Enter' && proposal) commitProposal();
+  if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.shiftKey ? redo() : undo(); }
+});
+
+/* --- 初期化 --- */
+setMode('view');
+applyCamera();
+syncToolbar();
+render();
+startEdit('n0');
+</script>
 </body>
 </html>
