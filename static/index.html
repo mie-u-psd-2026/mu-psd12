@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sample Application</title>
-    <!-- Vue.jsをCDNから読み込み -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <!-- BootStrapをCDNから読み込み -->
 	<link rel="stylesheet" href="//cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css">
 </head>
@@ -20,8 +18,8 @@
         </div>
 
         <div class="mb-3">
-            <button @click="execute" class="btn btn-primary">実行</button>
-            <button @click="execute_kansai" class="btn btn-success ms-2">関西弁で実行</button>
+            <app-button variant="primary" @click="execute">実行</app-button>
+            <app-button variant="success" class="ms-2" @click="execute_kansai">関西弁で実行</app-button>
         </div>
         
         <h3>結果:</h3>
@@ -30,8 +28,9 @@
         </div>
     </div>
 
-    <script>
-        const { createApp } = Vue;
+    <script type="module">
+        import { createApp } from 'https://unpkg.com/vue@3/dist/vue.esm-browser.js';
+        import AppButton from '/static/components/AppButton.js';
 
         createApp({
             data() {
@@ -73,7 +72,9 @@
                     this.sendRequest("あなたは親切な関西人です。ユーザーからの入力に対して、必ず関西弁で、親しみやすく、そして140字以内で回答してください。");
                 }
             }
-        }).mount('#app');
+        })
+            .component('app-button', AppButton)
+            .mount('#app');
     </script>
 </body>
 </html>
