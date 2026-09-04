@@ -136,7 +136,7 @@
     opacity: 0;
     pointer-events: none;
   }
-  .node.burning .burn { animation: burn 700ms linear forwards; }
+  .node.burning .burn { animation: burn 800ms linear forwards; }
   @keyframes burn { from { opacity: 0; } to { opacity: 0.85; } }
 
   /* AI提案（ゴースト） */
@@ -152,6 +152,9 @@
     opacity: 0.5;
   }
   .node.ghost-remove .text { text-decoration: line-through; color: var(--ai-magenta); }
+
+  /* join モードでの始点選択 */
+  .node.join-start .shape { border-color: var(--ai-cyan); border-style: dashed; }
 
   /* --- グループ --- */
   .group {
@@ -206,6 +209,30 @@
   .txt-btn:hover { color: var(--mono-fg); }
   .txt-btn:disabled { color: var(--mono-weak); cursor: default; }
   .txt-btn.ai { color: var(--ai-cyan); }
+
+  /* --- 常設UI: AIモデル選択（右下・上方向に開く） --- */
+  #model-select { right: var(--gap); bottom: var(--gap); font-size: 12px; }
+  #model-menu {
+    position: absolute;
+    right: 0; bottom: 100%;
+    margin-bottom: 8px;
+    background: var(--mono-bg);
+    border: 1px solid var(--mono-weak);
+    border-radius: 10px;
+    padding: 6px;
+    display: none;
+    min-width: 170px;
+    pointer-events: auto;
+  }
+  #model-menu.show { display: block; }
+  #model-menu .opt {
+    padding: 6px 10px;
+    font-size: 12px;
+    color: var(--mono-fg);
+    cursor: pointer;
+    border-radius: 6px;
+  }
+  #model-menu .opt:hover { background: var(--mono-weak); }
 
   /* ノート一覧 */
   #notes {
@@ -340,6 +367,11 @@
     </div>
   </div>
 
+  <div id="model-select" class="ui">
+    <button class="txt-btn" id="model-btn">MODEL: <span id="model-name"></span></button>
+    <div id="model-menu"></div>
+  </div>
+
   <div id="toast" class="ui"></div>
 
   <input type="file" id="file-input" accept="application/json" hidden>
@@ -350,9 +382,10 @@
    ひと通り触れる範囲で再現する。ロジックは意図的に単純化。
    ============================================================ */
 
-const MODES = ['view', 'add', 'remove', 'edit'];
-const MODE_LABEL = { view: 'ビュー', add: 'ノード追加', remove: 'ノード削除', edit: 'ノード編集' };
-const PASTELS = ['var(--pastel-1)', 'var(--pastel-2)', 'var(--pastel-3)', 'var(--pastel-4)', 'var(--pastel-5)'];
+const MODES = ['view', 'add', 'remove', 'edit', 'join', 'group'];
+const MODE_LABEL = { view: 'ビュー', add: 'ノード追加', remove: 'ノード削除', edit: 'ノード編集', join: 'ノード接続', group: 'グループ化' };
+const PASTELS = ['rgba(255,217,225,0.55)', 'rgba(213,236,255,0.55)', 'rgba(223,245,216,0.55)', 'rgba(255,242,201,0.55)', 'rgba(232,221,247,0.55)'];
+const MOCK_MODELS = ['qwen2.5-coder:0.5b', 'llama3.2:3b', 'phi3:mini'];
 
 const AI_ACTIONS = [
   { key: 'expand',  label: '深掘り' },
@@ -375,6 +408,8 @@ let mode = 'view';
 let hoverId = null;
 let editingId = null;
 let proposal = null;
+let joinStart = null;
+let groupMenuRoot = null;
 let seq = 1;
 
 const past = [];
@@ -409,7 +444,7 @@ function toast(msg) {
 /* --- 4.3 変更履歴（Undo / Redo） --- */
 function snapshot() {
   past.push(JSON.stringify(state));
-  if (past.length > 30) past.shift();
+  if (past.length > 20) past.shift();
   future.length = 0;
   syncToolbar();
 }
@@ -479,6 +514,114 @@ function removeNode(id) {
   state.groups = state.groups.filter((g) => g.members.length > 1);
 }
 
+/* --- ノード接続（4.1 join モード） --- */
+function tryLink(id) {
+  if (!joinStart) {
+    joinStart = id;
+    document.querySelector(`.node[data-id="${id}"]`)?.classList.add('join-start');
+    toast('接続先のノードを選択してください');
+    return;
+  }
+  if (joinStart === id) { cancelJoin(); return; }
+  const exists = state.links.some((l) => (l.a === joinStart && l.b === id) || (l.a === id && l.b === joinStart));
+  if (exists) {
+    toast('既に接続されています');
+  } else {
+    snapshot();
+    state.links.push({ id: uid('l'), a: joinStart, b: id, comment: '' });
+    render();
+    toast('間接エッジを作成しました');
+  }
+  cancelJoin();
+}
+function cancelJoin() {
+  document.querySelectorAll('.join-start').forEach((n) => n.classList.remove('join-start'));
+  joinStart = null;
+}
+function removeLink(linkId) {
+  snapshot();
+  state.links = state.links.filter((l) => l.id !== linkId);
+  render();
+  toast('間接エッジを削除しました');
+}
+
+/* --- グループ化（4.1 group モード） --- */
+function openGroupMenu(nodeId, x, y) {
+  closeGroupMenu();
+  const currentGroup = state.groups.find((g) => g.members.includes(nodeId));
+  const entries = [];
+  state.groups.forEach((g) => {
+    if (g !== currentGroup) entries.push({ label: g.title, action: () => addToGroup(nodeId, g.id) });
+  });
+  entries.push({ label: '＋ 新規グループ', action: () => createGroupWith(nodeId) });
+  if (currentGroup) entries.push({ label: '除外', action: () => removeFromGroup(nodeId, currentGroup.id) });
+
+  const root = document.createElement('div');
+  root.className = 'wheel';
+  root.style.pointerEvents = 'auto';
+  entries.forEach((entry, i) => {
+    const angle = (-Math.PI / 2) + (i / entries.length) * Math.PI * 2;
+    const item = document.createElement('div');
+    item.className = 'item';
+    item.style.left = (x + Math.cos(angle) * 110) + 'px';
+    item.style.top = (y + Math.sin(angle) * 110) + 'px';
+    item.textContent = entry.label;
+    item.addEventListener('click', (e) => { e.stopPropagation(); closeGroupMenu(); entry.action(); });
+    root.appendChild(item);
+  });
+  document.body.appendChild(root);
+  groupMenuRoot = root;
+  setTimeout(() => window.addEventListener('mousedown', closeGroupMenuOnOutsideClick, { once: true }), 0);
+}
+function closeGroupMenuOnOutsideClick(e) {
+  if (groupMenuRoot && !groupMenuRoot.contains(e.target)) closeGroupMenu();
+}
+function closeGroupMenu() {
+  if (groupMenuRoot) groupMenuRoot.remove();
+  groupMenuRoot = null;
+}
+function addToGroup(nodeId, groupId) {
+  snapshot();
+  const g = state.groups.find((x) => x.id === groupId);
+  if (g && !g.members.includes(nodeId)) g.members.push(nodeId);
+  render();
+  toast('グループに追加しました');
+}
+function createGroupWith(nodeId) {
+  const title = prompt('新しいグループのタイトル', 'グループ');
+  if (title === null) return;
+  snapshot();
+  state.groups.push({ id: uid('gr'), members: [nodeId], title: title.trim() || 'グループ', comment: '', color: PASTELS[state.groups.length % PASTELS.length] });
+  render();
+  toast('グループを作成しました');
+}
+function removeFromGroup(nodeId, groupId) {
+  snapshot();
+  const g = state.groups.find((x) => x.id === groupId);
+  if (g) g.members = g.members.filter((m) => m !== nodeId);
+  state.groups = state.groups.filter((x) => x.members.length > 1);
+  render();
+  toast('グループから除外しました');
+}
+function editGroup(groupId) {
+  const g = state.groups.find((x) => x.id === groupId);
+  if (!g) return;
+  const title = prompt('グループタイトル（空にすると削除）', g.title);
+  if (title === null) return;
+  snapshot();
+  if (!title.trim()) {
+    state.groups = state.groups.filter((x) => x.id !== groupId);
+    render();
+    toast('グループを削除しました');
+    return;
+  }
+  g.title = title.trim();
+  const comment = prompt('コメント', g.comment || '');
+  if (comment !== null) g.comment = comment;
+  render();
+  toast('グループを更新しました');
+}
+
 /* ============================================================
    描画
    ============================================================ */
@@ -490,7 +633,7 @@ function render() {
   state.groups.forEach(renderGroup);
   state.nodes.forEach((n) => renderNode(n, null));
   state.nodes.forEach((n) => { if (n.parent) drawEdge(nodeById(n.parent), n, 'direct'); });
-  state.links.forEach((l) => drawEdge(nodeById(l.a), nodeById(l.b), 'indirect'));
+  state.links.forEach((l) => drawEdge(nodeById(l.a), nodeById(l.b), 'indirect', l.id));
 
   if (proposal) renderProposal();
   renderNotes();
@@ -540,10 +683,18 @@ function renderGroup(g) {
   box.style.height = (Math.max(...ys) - Math.min(...ys) + pad * 1.4) + 'px';
   box.style.background = g.color;
   box.innerHTML = `<div class="label">${g.title}</div><div class="comment">${g.comment}</div>`;
+  const label = box.querySelector('.label');
+  label.style.pointerEvents = 'auto';
+  label.style.cursor = 'pointer';
+  label.addEventListener('click', (e) => {
+    if (mode !== 'group') return;
+    e.stopPropagation();
+    editGroup(g.id);
+  });
   el.content.prepend(box); // ノード・エッジより背面に置く
 }
 
-function drawEdge(a, b, type) {
+function drawEdge(a, b, type, linkId) {
   if (!a || !b) return;
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   line.setAttribute('x1', a.x + 20000);
@@ -557,6 +708,15 @@ function drawEdge(a, b, type) {
     line.setAttribute('stroke', '#9b9b9b');
     line.setAttribute('stroke-width', '1.2');
     line.setAttribute('stroke-dasharray', '6 6');
+    if (linkId) {
+      line.style.pointerEvents = 'stroke';
+      line.style.cursor = 'pointer';
+      line.addEventListener('click', (e) => {
+        if (mode !== 'join') return;
+        e.stopPropagation();
+        removeLink(linkId);
+      });
+    }
   } else {
     line.setAttribute('stroke', '#00e5ff');
     line.setAttribute('stroke-width', '1.6');
@@ -583,7 +743,9 @@ document.addEventListener('contextmenu', (e) => e.preventDefault());
 // --- 左ドラッグでパン（view モード） ---
 let panning = null;
 el.canvas.addEventListener('mousedown', (e) => {
-  if (e.button !== 0 || mode !== 'view' || wheelUI.open) return;
+  if (e.button !== 0 || wheelUI.open) return;
+  if (mode === 'join' && joinStart) { cancelJoin(); toast('接続をキャンセルしました'); return; }
+  if (mode !== 'view') return;
   panning = { sx: e.clientX, sy: e.clientY, ox: camera.x, oy: camera.y };
   el.canvas.style.cursor = 'grabbing';
 });
@@ -626,6 +788,8 @@ function setMode(next) {
   mode = next;
   el.modeName.textContent = next;
   el.canvas.style.cursor = next === 'view' ? 'grab' : 'crosshair';
+  cancelJoin();
+  closeGroupMenu();
 }
 
 // --- モードごとの左クリック操作 ---
@@ -652,7 +816,7 @@ el.content.addEventListener('mousedown', (e) => {
   }
   if (mode === 'remove') {
     if (!nodeById(id).parent) { toast('メインテーマノードは削除できません'); return; }
-    // 一定時間の長押しで削除
+    // 長押し800msで削除
     burningEl = box;
     box.classList.add('burning');
     burnTimer = setTimeout(() => {
@@ -660,7 +824,16 @@ el.content.addEventListener('mousedown', (e) => {
       removeNode(id);
       render();
       toast('ノードを削除しました');
-    }, 700);
+    }, 800);
+    return;
+  }
+  if (mode === 'join') {
+    tryLink(id);
+    return;
+  }
+  if (mode === 'group') {
+    openGroupMenu(id, e.clientX, e.clientY);
+    return;
   }
 });
 function cancelBurn() {
@@ -853,7 +1026,7 @@ function runAI(action) {
     if (!cands.length) return toast('関連付けできるノードがありません');
     const other = pick(cands);
     ops.push(`「${target.text || '無題'}」と「${other.text || '無題'}」を間接エッジで接続`);
-    proposal = { title, ops, ghosts, removes, links: [{ a: target.id, b: other.id }] };
+    proposal = { title, ops, ghosts, removes, links: [{ id: uid('l'), a: target.id, b: other.id, comment: '' }] };
     return showProposal();
   } else if (action === 'merge') {
     title = 'AI ノード統合';
@@ -982,9 +1155,11 @@ document.getElementById('btn-save').addEventListener('click', () => {
 document.getElementById('btn-load').addEventListener('click', () => {
   const raw = localStorage.getItem('bs-mock-sheet');
   if (!raw) return toast('保存されたシートがありません');
-  snapshot();
   state = JSON.parse(raw);
   bumpSeq();
+  past.length = 0; // 4.3: 読込を跨いで変更履歴は保持しない
+  future.length = 0;
+  syncToolbar();
   render();
   toast('シートを読み込みました');
 });
@@ -1000,9 +1175,11 @@ document.getElementById('btn-import').addEventListener('click', () => el.file.cl
 el.file.addEventListener('change', async () => {
   const file = el.file.files[0];
   if (!file) return;
-  snapshot();
   state = JSON.parse(await file.text());
   bumpSeq();
+  past.length = 0; // 4.3: 読込を跨いで変更履歴は保持しない
+  future.length = 0;
+  syncToolbar();
   el.file.value = '';
   render();
   toast('シートをインポートしました');
@@ -1017,6 +1194,37 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && proposal) commitProposal();
   if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.shiftKey ? redo() : undo(); }
 });
+
+/* ============================================================
+   6.2 AIモデル選択（右下・常設・上方向に開く）
+   ============================================================ */
+const modelBtn = document.getElementById('model-btn');
+const modelMenu = document.getElementById('model-menu');
+const modelName = document.getElementById('model-name');
+let currentModel = MOCK_MODELS[0];
+
+function renderModelMenu() {
+  modelName.textContent = currentModel;
+  modelMenu.innerHTML = MOCK_MODELS.map((m) =>
+    `<div class="opt" data-model="${m}">${m}${m === currentModel ? ' ✓' : ''}</div>`
+  ).join('');
+}
+modelBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  modelMenu.classList.toggle('show');
+});
+modelMenu.addEventListener('click', (e) => {
+  const opt = e.target.closest('.opt');
+  if (!opt) return;
+  currentModel = opt.dataset.model;
+  renderModelMenu();
+  modelMenu.classList.remove('show');
+  toast(`モデルを切り替えました: ${currentModel}`);
+});
+window.addEventListener('mousedown', (e) => {
+  if (!e.target.closest('#model-select')) modelMenu.classList.remove('show');
+});
+renderModelMenu();
 
 /* --- 初期化 --- */
 setMode('view');
