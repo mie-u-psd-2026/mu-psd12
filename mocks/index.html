@@ -4,30 +4,33 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>BrainStorming with AI - Mock</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"></script>
 <style>
   /* ============================================================
      6. デザインガイドライン
-       - 基本カラーセット: モノクロ
-       - AI関連: ビビッド・サイバーカラー
-       - グループ: パステル
-       - 領域は境界線ではなくマージンで仮想的に分割する
+       - 6.1 カラーセット: モノクロ / AIビビッド・サイバー(ネオンシアン) / グループ(パステル)
+       - 6.2 領域は境界線ではなくマージンで仮想的に分割する（ノード・ホイール・パネルは例外）
+       - 6.3 機能はアイコン+ホバーヒントで示す
      ============================================================ */
   :root {
-    --mono-fg: #000;
-    --mono-bg: #fff;
-    --mono-sub: #8a8a8a;
-    --mono-weak: #c9c9c9;
+    --mono-900: #1a1a1a;
+    --mono-700: #4a4a4a;
+    --mono-500: #8a8a8a;
+    --mono-300: #c9c9c9;
+    --mono-100: #f5f5f5;
+    --mono-bg: #ffffff;
 
     --ai-cyan: #00e5ff;
-    --ai-magenta: #ff2d95;
+    --ai-cyan-dim: #0093a6;
 
-    --pastel-1: #ffd9e1;
-    --pastel-2: #d5ecff;
-    --pastel-3: #dff5d8;
-    --pastel-4: #fff2c9;
-    --pastel-5: #e8ddf7;
+    --pastel-1: rgba(212,228,247,0.55);
+    --pastel-2: rgba(247,212,224,0.55);
+    --pastel-3: rgba(212,247,224,0.55);
+    --pastel-4: rgba(247,240,212,0.55);
+    --pastel-5: rgba(228,212,247,0.55);
 
     --gap: 28px;
+    --grid: 8px;
   }
 
   html, body {
@@ -38,7 +41,7 @@
     overflow: hidden;
     background: var(--mono-bg);
     font-family: "Segoe UI", "Yu Gothic UI", sans-serif;
-    color: var(--mono-fg);
+    color: var(--mono-900);
     user-select: none;
   }
 
@@ -47,11 +50,10 @@
     position: absolute;
     inset: 0;
     background-color: var(--mono-bg);
-    background-image: radial-gradient(#000 1px, transparent 1px);
+    background-image: radial-gradient(#1a1a1a 1px, transparent 1px);
     background-size: 24px 24px;
     background-position: 0 0;
   }
-
   #vignette {
     position: fixed;
     inset: 0;
@@ -93,7 +95,6 @@
     word-break: break-word;
   }
   .node .text[contenteditable="true"] { user-select: text; cursor: text; }
-  textarea { user-select: text; }
   .node.theme .shape {
     position: relative;
     width: 260px;
@@ -101,7 +102,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid var(--mono-fg);
+    border: 2px solid var(--mono-900);
     border-radius: 70px / 50px;
     background: var(--mono-bg);
   }
@@ -114,7 +115,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 1.5px solid var(--mono-fg);
+    border: 1.5px solid var(--mono-900);
     border-radius: 26px;
     background: var(--mono-bg);
   }
@@ -122,41 +123,44 @@
 
   .node .text:empty::before {
     content: attr(data-placeholder);
-    color: var(--mono-weak);
+    color: var(--mono-300);
   }
   .node.hit .shape { box-shadow: 0 0 0 5px rgba(0,0,0,0.07); }
   .node.editing .shape { border-style: dashed; }
 
-  /* 削除モードの長押し進捗 */
+  /* 削除モードの長押し進捗（4.1 remove: 800ms） */
   .node .burn {
     position: absolute;
     inset: -4px;
     border-radius: inherit;
-    background: var(--mono-fg);
+    background: var(--mono-900);
     opacity: 0;
     pointer-events: none;
   }
   .node.burning .burn { animation: burn 800ms linear forwards; }
   @keyframes burn { from { opacity: 0; } to { opacity: 0.85; } }
 
-  /* AI提案（ゴースト） */
+  /* 6.1: AI提案中（未コミット）の変更は破線枠+点滅で区別する */
   .node.ghost .shape {
     border-color: var(--ai-cyan);
     border-style: dashed;
     box-shadow: 0 0 12px rgba(0,229,255,0.55);
+    animation: ai-pulse 1.1s ease-in-out infinite;
   }
-  .node.ghost .text { color: #0093a6; }
+  .node.ghost .text { color: var(--ai-cyan-dim); }
   .node.ghost-remove .shape {
-    border-color: var(--ai-magenta);
+    border-color: var(--ai-cyan);
     border-style: dashed;
     opacity: 0.5;
+    animation: ai-pulse 1.1s ease-in-out infinite;
   }
-  .node.ghost-remove .text { text-decoration: line-through; color: var(--ai-magenta); }
+  .node.ghost-remove .text { text-decoration: line-through; color: var(--ai-cyan-dim); }
+  @keyframes ai-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
 
   /* join モードでの始点選択 */
   .node.join-start .shape { border-color: var(--ai-cyan); border-style: dashed; }
 
-  /* --- グループ --- */
+  /* --- グループ（6.1: 半透明領域） --- */
   .group {
     position: absolute;
     border-radius: 22px;
@@ -176,149 +180,197 @@
     left: 16px;
     bottom: -22px;
     font-size: 11px;
-    color: var(--mono-sub);
+    color: var(--mono-500);
   }
 
   /* ============================================================
-     UI レイヤ（境界線を持たず、マージンで領域を分割する）
+     UI レイヤ（境界線を持たず、マージンで領域を分割する。6.2）
      ============================================================ */
   .ui { position: fixed; z-index: 20; }
-  #title, #mode-hud, #toast { pointer-events: none; } /* シート操作を妨げない */
+  #app-name, #mode-hud, #toast { pointer-events: none; }
 
-  #title {
+  /* --- 常設UI: アプリ名（6.2: 左上） --- */
+  #app-name {
     left: var(--gap); top: var(--gap);
     font-size: 15px; font-weight: 700; letter-spacing: 0.04em;
   }
-  #title span { color: var(--ai-cyan); text-shadow: 0 0 8px rgba(0,229,255,0.5); }
+  #app-name span { color: var(--ai-cyan); text-shadow: 0 0 8px rgba(0,229,255,0.5); }
 
+  /* --- 常設UI: モード表示（6.2: アプリ名の下） --- */
   #mode-hud {
-    left: var(--gap); top: calc(var(--gap) + 34px);
-    font-size: 12px; color: var(--mono-sub);
+    left: var(--gap); top: calc(var(--gap) + 26px);
+    font-size: 12px; color: var(--mono-500);
   }
-  #mode-hud b { font-size: 20px; color: var(--mono-fg); }
+  #mode-hud b { font-size: 20px; color: var(--mono-900); }
   #mode-hud .hint { display: block; margin-top: 6px; line-height: 1.7; }
 
-  #toolbar {
+  /* --- 常設UI: シートタイトル（4.8: 右上、インライン編集） --- */
+  #sheet-title {
     right: var(--gap); top: var(--gap);
-    display: flex; gap: 18px; font-size: 12px;
+    font-size: 12px; color: var(--mono-700); text-align: right;
+    outline: none; cursor: text; pointer-events: auto;
   }
-  .txt-btn {
-    background: none; border: none; padding: 0; margin: 0;
-    font: inherit; color: var(--mono-sub); cursor: pointer;
-  }
-  .txt-btn:hover { color: var(--mono-fg); }
-  .txt-btn:disabled { color: var(--mono-weak); cursor: default; }
-  .txt-btn.ai { color: var(--ai-cyan); }
+  #sheet-title:empty::before { content: attr(data-placeholder); color: var(--mono-300); }
 
-  /* --- 常設UI: AIモデル選択（右下・上方向に開く） --- */
-  #model-select { right: var(--gap); bottom: var(--gap); font-size: 12px; }
-  #model-menu {
-    position: absolute;
-    right: 0; bottom: 100%;
-    margin-bottom: 8px;
-    background: var(--mono-bg);
-    border: 1px solid var(--mono-weak);
-    border-radius: 10px;
-    padding: 6px;
-    display: none;
-    min-width: 170px;
-    pointer-events: auto;
+  /* --- 常設UI: ツールバー（4.4 / 4.8: アイコンのみ + ホバーでヒント表示） --- */
+  #toolbar {
+    right: var(--gap); top: calc(var(--gap) + 26px);
+    display: flex; gap: 6px;
   }
-  #model-menu.show { display: block; }
-  #model-menu .opt {
-    padding: 6px 10px;
-    font-size: 12px;
-    color: var(--mono-fg);
-    cursor: pointer;
-    border-radius: 6px;
+  .icon-btn {
+    position: relative;
+    background: none; border: none; padding: 6px; margin: 0;
+    color: var(--mono-500); cursor: pointer; pointer-events: auto;
   }
-  #model-menu .opt:hover { background: var(--mono-weak); }
+  .icon-btn svg { width: 18px; height: 18px; display: block; }
+  .icon-btn:hover { color: var(--mono-900); }
+  .icon-btn:disabled { color: var(--mono-300); cursor: default; }
+  .icon-btn::after {
+    content: attr(data-tip);
+    position: absolute; top: 100%; right: 0;
+    margin-top: 4px; font-size: 11px; color: var(--mono-500);
+    white-space: nowrap; opacity: 0; pointer-events: none;
+    transition: opacity 120ms ease; background: var(--mono-bg);
+  }
+  .icon-btn:hover::after { opacity: 1; }
 
-  /* ノート一覧 */
+  /* --- 常設UI: ノート一覧 --- */
   #notes {
-    right: var(--gap); top: calc(var(--gap) + 44px);
-    width: 250px; max-height: 46vh; overflow-y: auto;
+    right: var(--gap); top: calc(var(--gap) + 78px);
+    width: 250px; max-height: 42vh; overflow-y: auto;
   }
-  #notes h2 { font-size: 11px; color: var(--mono-sub); font-weight: 600; margin: 0 0 12px; }
+  #notes h2 { font-size: 11px; color: var(--mono-500); font-weight: 600; margin: 0 0 12px; }
   .note { margin-bottom: 20px; }
   .note .t { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-  .note .b { font-size: 11px; color: var(--mono-sub); line-height: 1.7; }
-  #notes .empty { font-size: 11px; color: var(--mono-weak); }
+  .note .b { font-size: 11px; color: var(--mono-500); line-height: 1.7; }
+  #notes .empty { font-size: 11px; color: var(--mono-300); }
 
-  /* ひとりごとメモ */
-  #mutter {
-    left: var(--gap); bottom: var(--gap); width: 320px;
-  }
+  /* --- 常設UI: ひとりごとメモ（4.7: 左下） --- */
+  #mutter { left: var(--gap); bottom: var(--gap); width: 320px; }
   #mutter textarea {
-    width: 100%; height: 62px; resize: none;
+    width: 100%; height: 62px; resize: none; box-sizing: border-box;
     border: none; outline: none; background: transparent;
-    font: inherit; font-size: 13px; line-height: 1.6; color: var(--mono-fg);
+    font: inherit; font-size: 13px; line-height: 1.6; color: var(--mono-900);
   }
-  #mutter textarea::placeholder { color: var(--mono-weak); }
-  #mutter .caption { font-size: 11px; color: var(--mono-sub); margin-top: 4px; }
+  #mutter textarea::placeholder { color: var(--mono-300); }
+  #mutter .caption { font-size: 11px; color: var(--mono-500); margin-top: 4px; }
 
-  /* --- ホイールUI（明示的な境界を許可） --- */
+  /* --- 常設UI: AIモデル選択 + システムプロンプト（4.2: 右下、上方向に開く） --- */
+  #model-select { right: var(--gap); bottom: var(--gap); width: 220px; }
+  .txt-btn {
+    background: none; border: none; padding: 0; margin: 0;
+    font: inherit; font-size: 12px; color: var(--mono-500); cursor: pointer; pointer-events: auto;
+  }
+  .txt-btn:hover { color: var(--mono-900); }
+  #model-menu {
+    position: absolute; right: 0; bottom: 100%; margin-bottom: 8px;
+    background: var(--mono-bg); border-radius: 10px; padding: 6px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    min-width: 190px; pointer-events: auto;
+  }
+  #model-menu .opt { padding: 6px 10px; font-size: 12px; cursor: pointer; border-radius: 6px; }
+  #model-menu .opt:hover { background: var(--mono-100); }
+  #system-prompt {
+    display: block; width: 100%; box-sizing: border-box; margin-top: 8px;
+    height: 54px; resize: none; border: none; outline: none; background: transparent;
+    border-top: 1px solid var(--mono-300);
+    font: inherit; font-size: 11px; line-height: 1.6; color: var(--mono-900); padding-top: 8px;
+    pointer-events: auto;
+  }
+  #system-prompt::placeholder { color: var(--mono-300); }
+
+  /* --- ホイールUI（6.2: 明示的な境界を許可） --- */
   .wheel { position: fixed; z-index: 40; pointer-events: none; }
+  /* 6.2: ショートカットホイールの各項目は境界を持たせない（アイコン+ヒントのみ） */
   .wheel .item {
     position: absolute;
     transform: translate(-50%, -50%);
-    min-width: 74px;
-    padding: 10px 12px;
-    border-radius: 20px;
-    background: var(--mono-bg);
-    border: 1.5px solid var(--mono-weak);
-    color: var(--mono-sub);
-    font-size: 12px;
+    min-width: 56px;
+    padding: 10px;
+    color: var(--mono-500);
     text-align: center;
-    transition: transform 80ms ease;
+    transition: transform 80ms ease, color 80ms ease;
+  }
+  .wheel .item svg { width: 20px; height: 20px; display: block; margin: 0 auto; }
+  .wheel .item .dot { width: 20px; height: 20px; border-radius: 50%; margin: 0 auto; display: block; }
+  .wheel .item .tip {
+    display: block; font-size: 0; max-height: 0; overflow: hidden;
+    transition: font-size 100ms ease; margin-top: 0;
   }
   .wheel .item.active {
-    border-color: var(--mono-fg);
-    color: var(--mono-fg);
-    font-weight: 600;
+    color: var(--mono-900);
     transform: translate(-50%, -50%) scale(1.12);
   }
+  .wheel .item.active .tip { font-size: 11px; max-height: 20px; margin-top: 4px; }
   .wheel .hub {
     position: absolute;
     transform: translate(-50%, -50%);
     font-size: 11px;
-    color: var(--mono-weak);
+    color: var(--mono-300);
   }
-  .wheel.ai .item { border-color: rgba(0,229,255,0.45); color: #0093a6; }
+  .wheel.ai .item { color: var(--ai-cyan-dim); }
   .wheel.ai .item.active {
-    border-color: var(--ai-cyan);
-    color: var(--mono-fg);
-    box-shadow: 0 0 14px rgba(0,229,255,0.6);
+    color: var(--mono-900);
+    filter: drop-shadow(0 0 6px rgba(0,229,255,0.65));
   }
   .wheel.ai .hub { color: var(--ai-cyan); }
 
-  /* --- AI提案パネル --- */
+  /* --- パネル共通（6.2: シート一覧・インライン編集は意味を持つため境界を許可） --- */
+  .panel {
+    position: fixed;
+    background: var(--mono-bg);
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.16);
+    padding: 14px;
+    z-index: 45;
+    pointer-events: auto;
+  }
+
+  /* --- 4.8: シート一覧パネル --- */
+  #sheet-panel { left: 50%; top: 50%; transform: translate(-50%, -50%); width: 340px; max-height: 60vh; overflow-y: auto; }
+  #sheet-panel .panel-head { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: var(--mono-500); font-weight: 600; margin-bottom: 8px; }
+  #sheet-panel .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 8px; cursor: pointer; border-radius: 8px; }
+  #sheet-panel .row:hover { background: var(--mono-100); }
+  #sheet-panel .row .t { font-size: 13px; }
+  #sheet-panel .row .d { font-size: 11px; color: var(--mono-500); }
+  #sheet-panel .empty { font-size: 12px; color: var(--mono-300); padding: 10px 8px; }
+
+  /* --- 4.1 join/group: 簡易インライン編集パネル --- */
+  #edit-panel { width: 220px; }
+  #edit-panel input, #edit-panel textarea {
+    display: block; width: 100%; box-sizing: border-box;
+    border: 1px solid var(--mono-300); border-radius: 8px;
+    font: inherit; font-size: 12px; padding: 6px 8px; margin-bottom: 8px;
+  }
+  #edit-panel textarea { resize: none; height: 56px; }
+  #edit-panel .panel-actions { display: flex; justify-content: flex-end; gap: 4px; }
+
+  /* --- AI提案パネル（4.3: 中央下） --- */
   #proposal {
     left: 50%; bottom: var(--gap);
     transform: translateX(-50%);
     width: 460px;
     z-index: 30;
     display: none;
+    pointer-events: auto;
   }
   #proposal.show { display: block; }
-  #proposal .head {
-    font-size: 12px; color: var(--ai-cyan); font-weight: 700;
-    letter-spacing: 0.06em; margin-bottom: 10px;
-  }
+  #proposal .head { font-size: 12px; color: var(--ai-cyan-dim); font-weight: 700; letter-spacing: 0.06em; margin-bottom: 10px; }
   #proposal ol { margin: 0 0 14px; padding-left: 20px; }
   #proposal li { font-size: 12px; line-height: 1.9; }
   #proposal .actions { display: flex; gap: 20px; font-size: 12px; }
-  #proposal .commit { color: var(--ai-cyan); font-weight: 700; }
-  #proposal .reject { color: var(--mono-sub); }
+  #proposal .commit { color: var(--ai-cyan-dim); font-weight: 700; }
 
   #toast {
     left: 50%; top: var(--gap);
     transform: translateX(-50%);
-    font-size: 12px; color: var(--mono-sub);
+    font-size: 12px; color: var(--mono-500);
     opacity: 0; transition: opacity 200ms ease;
     z-index: 50;
   }
   #toast.show { opacity: 1; }
+
+  [hidden] { display: none !important; }
 </style>
 </head>
 <body>
@@ -328,7 +380,7 @@
   </div>
   <div id="vignette"></div>
 
-  <div id="title" class="ui">BrainStorming with <span>AI</span></div>
+  <div id="app-name" class="ui">BrainStorming with <span>AI</span></div>
 
   <div id="mode-hud" class="ui">
     MODE <b id="mode-name">view</b>
@@ -339,13 +391,16 @@
     </span>
   </div>
 
+  <div id="sheet-title" class="ui" contenteditable="true" data-placeholder="無題のシート"></div>
+
   <div id="toolbar" class="ui">
-    <button class="txt-btn" id="btn-undo">元に戻す</button>
-    <button class="txt-btn" id="btn-redo">やり直す</button>
-    <button class="txt-btn" id="btn-save">保存</button>
-    <button class="txt-btn" id="btn-load">読込</button>
-    <button class="txt-btn" id="btn-export">エクスポート</button>
-    <button class="txt-btn" id="btn-import">インポート</button>
+    <button class="icon-btn" id="btn-new" data-tip="新規"><i data-feather="file-plus"></i></button>
+    <button class="icon-btn" id="btn-open" data-tip="読込"><i data-feather="folder"></i></button>
+    <button class="icon-btn" id="btn-save" data-tip="保存"><i data-feather="save"></i></button>
+    <button class="icon-btn" id="btn-export" data-tip="エクスポート"><i data-feather="download"></i></button>
+    <button class="icon-btn" id="btn-import" data-tip="インポート"><i data-feather="upload"></i></button>
+    <button class="icon-btn" id="btn-undo" data-tip="元に戻す"><i data-feather="rotate-ccw"></i></button>
+    <button class="icon-btn" id="btn-redo" data-tip="やり直す"><i data-feather="rotate-cw"></i></button>
   </div>
 
   <div id="notes" class="ui">
@@ -368,8 +423,26 @@
   </div>
 
   <div id="model-select" class="ui">
+    <div id="model-menu" hidden></div>
     <button class="txt-btn" id="model-btn">MODEL: <span id="model-name"></span></button>
-    <div id="model-menu"></div>
+    <textarea id="system-prompt" placeholder="システムプロンプト（AIへの指示をカスタマイズ）"></textarea>
+  </div>
+
+  <div id="sheet-panel" class="ui panel" hidden>
+    <div class="panel-head">
+      <span>シート一覧</span>
+      <button class="icon-btn" id="sheet-panel-close" data-tip="閉じる"><i data-feather="x"></i></button>
+    </div>
+    <div id="sheet-list"></div>
+  </div>
+
+  <div id="edit-panel" class="ui panel" hidden>
+    <input id="edit-title" type="text" placeholder="タイトル">
+    <textarea id="edit-comment" placeholder="コメント"></textarea>
+    <div class="panel-actions">
+      <button class="icon-btn" id="edit-delete" data-tip="削除"><i data-feather="trash-2"></i></button>
+      <button class="icon-btn" id="edit-confirm" data-tip="確定"><i data-feather="check"></i></button>
+    </div>
   </div>
 
   <div id="toast" class="ui"></div>
@@ -383,26 +456,44 @@
    ============================================================ */
 
 const MODES = ['view', 'add', 'remove', 'edit', 'join', 'group'];
-const MODE_LABEL = { view: 'ビュー', add: 'ノード追加', remove: 'ノード削除', edit: 'ノード編集', join: 'ノード接続', group: 'グループ化' };
-const PASTELS = ['rgba(255,217,225,0.55)', 'rgba(213,236,255,0.55)', 'rgba(223,245,216,0.55)', 'rgba(255,242,201,0.55)', 'rgba(232,221,247,0.55)'];
-const MOCK_MODELS = ['qwen2.5-coder:0.5b', 'llama3.2:3b', 'phi3:mini'];
-
-const AI_ACTIONS = [
-  { key: 'expand',  label: '深掘り' },
-  { key: 'newview', label: '新視点' },
-  { key: 'link',    label: '関連付け' },
-  { key: 'merge',   label: '統合' },
-  { key: 'group',   label: 'グループ化' },
-  { key: 'note',    label: 'ノート生成' },
-];
-
-// --- 状態 ---
-let state = {
-  nodes: [{ id: 'n0', kind: 'theme', text: '', parent: null, x: 0, y: 0 }],
-  links: [],   // 間接エッジ {a, b}
-  groups: [],  // {id, members:[nodeId], title, comment, color}
-  notes: [],   // {id, title, body}
+const MODE_META = {
+  view:   { label: 'ビュー',     icon: 'move' },
+  add:    { label: 'ノード追加', icon: 'plus-circle' },
+  remove: { label: 'ノード削除', icon: 'trash-2' },
+  edit:   { label: 'ノード編集', icon: 'edit-2' },
+  join:   { label: 'ノード接続', icon: 'link-2' },
+  group:  { label: 'グループ化', icon: 'layers' },
 };
+const AI_ACTIONS = [
+  { key: 'expand',  label: '深掘り',     icon: 'git-branch' },
+  { key: 'newview', label: '新視点',     icon: 'compass' },
+  { key: 'link',    label: '関連付け',   icon: 'link' },
+  { key: 'merge',   label: '統合',       icon: 'shuffle' },
+  { key: 'group',   label: 'グループ化', icon: 'layers' },
+  { key: 'note',    label: 'ノート生成', icon: 'file-text' },
+];
+const PASTELS = ['var(--pastel-1)', 'var(--pastel-2)', 'var(--pastel-3)', 'var(--pastel-4)', 'var(--pastel-5)'];
+const MOCK_MODELS = ['qwen2.5-coder:0.5b', 'llama3.2:3b', 'phi3:mini'];
+const SAMPLE_IDEAS = [
+  '導線を1画面にまとめる', '初回オンボーディングを短縮', 'ショートカット中心の操作',
+  'オフラインでも使える', '手戻りしやすい履歴', '声で入力する', 'テンプレートから始める',
+  '成果物を自動で要約', '迷ったら他人の事例を見る', '目的を毎回思い出させる',
+];
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+// --- 状態（8.1.1: 本体。x/yは永続化しないランタイム専用フィールド） ---
+function blankBody() {
+  return {
+    nodes: [{ id: 'n0', kind: 'theme', text: '', parent: null, x: 0, y: 0 }],
+    links: [],
+    groups: [],
+    notes: [],
+  };
+}
+let state = blankBody();
+let currentSheetId = null;
+let sheetTitle = '';
+
 let camera = { x: window.innerWidth / 2, y: window.innerHeight / 2, k: 1 };
 let mode = 'view';
 let hoverId = null;
@@ -410,8 +501,10 @@ let editingId = null;
 let proposal = null;
 let joinStart = null;
 let groupMenuRoot = null;
-let seq = 1;
+let aiTargetId = null;
+let editPanelState = null;
 
+let seq = 1;
 const past = [];
 const future = [];
 
@@ -426,6 +519,14 @@ const el = {
   proposalOps: document.getElementById('proposal-ops'),
   toast: document.getElementById('toast'),
   file: document.getElementById('file-input'),
+  sheetTitle: document.getElementById('sheet-title'),
+  sheetPanel: document.getElementById('sheet-panel'),
+  sheetList: document.getElementById('sheet-list'),
+  editPanel: document.getElementById('edit-panel'),
+  editTitle: document.getElementById('edit-title'),
+  editComment: document.getElementById('edit-comment'),
+  editDelete: document.getElementById('edit-delete'),
+  editConfirm: document.getElementById('edit-confirm'),
 };
 
 const uid = (p) => p + (seq++);
@@ -434,6 +535,11 @@ const bumpSeq = () => { seq += state.nodes.length + state.groups.length + state.
 const nodeById = (id) => state.nodes.find((n) => n.id === id);
 const childrenOf = (id) => state.nodes.filter((n) => n.parent === id);
 
+// 6.3: 新しく生成したアイコン要素をSVGへ変換する
+function renderIcons() {
+  if (window.feather) window.feather.replace();
+}
+
 function toast(msg) {
   el.toast.textContent = msg;
   el.toast.classList.add('show');
@@ -441,7 +547,7 @@ function toast(msg) {
   toast.timer = setTimeout(() => el.toast.classList.remove('show'), 1800);
 }
 
-/* --- 4.3 変更履歴（Undo / Redo） --- */
+/* --- 4.4 変更履歴（Undo / Redo） --- */
 function snapshot() {
   past.push(JSON.stringify(state));
   if (past.length > 20) past.shift();
@@ -453,6 +559,7 @@ function undo() {
   future.push(JSON.stringify(state));
   state = JSON.parse(past.pop());
   render();
+  startSimulation();
   syncToolbar();
   toast('元に戻しました');
 }
@@ -461,6 +568,7 @@ function redo() {
   past.push(JSON.stringify(state));
   state = JSON.parse(future.pop());
   render();
+  startSimulation();
   syncToolbar();
   toast('やり直しました');
 }
@@ -480,14 +588,9 @@ function applyCamera() {
 
 /* --- ノード操作（4.1 シート編集） --- */
 function placeChild(parent) {
-  const index = childrenOf(parent.id).length;
-  const gp = parent.parent ? nodeById(parent.parent) : null;
-  const base = gp ? Math.atan2(parent.y - gp.y, parent.x - gp.x) : Math.PI / 2;
-  const spread = gp ? Math.PI * 0.7 : Math.PI * 1.6;
-  const slot = index % 5;
-  const ring = Math.floor(index / 5);
-  const angle = base - spread / 2 + (spread / 4) * slot;
-  const radius = (parent.kind === 'theme' ? 300 : 240) + ring * 130;
+  // 6.4: 正確な位置計算はせず親付近へ仮配置するのみ。重なりは物理シミュレーションが解決する
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 40;
   return { x: parent.x + Math.cos(angle) * radius, y: parent.y + Math.sin(angle) * radius };
 }
 
@@ -514,6 +617,93 @@ function removeNode(id) {
   state.groups = state.groups.filter((g) => g.members.length > 1);
 }
 
+/* --- 物理シミュレーション（6.4 ノードの表示） --- */
+let simAlpha = 0;
+let simRunning = false;
+const SIM_REPEL_K = 24000;    // 斥力係数（重なり防止、距離の逆二乗）
+const SIM_LINK_DIST = 160;    // 直接エッジのばね自然長
+const SIM_LINK_K = 0.02;      // 直接エッジのばね係数
+const SIM_INDIRECT_K = 0.01;  // 間接エッジのばね係数（弱め）
+
+function simTick() {
+  const nodes = state.nodes;
+  const force = new Map(nodes.map((n) => [n.id, { x: 0, y: 0 }]));
+
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      let dx = a.x - b.x, dy = a.y - b.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const push = SIM_REPEL_K / (dist * dist);
+      dx /= dist; dy /= dist;
+      force.get(a.id).x += dx * push;
+      force.get(a.id).y += dy * push;
+      force.get(b.id).x -= dx * push;
+      force.get(b.id).y -= dy * push;
+    }
+  }
+
+  function applySpring(aId, bId, idealDist, k) {
+    const a = nodeById(aId), b = nodeById(bId);
+    if (!a || !b) return;
+    let dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    const pull = (dist - idealDist) * k;
+    dx /= dist; dy /= dist;
+    force.get(a.id).x += dx * pull;
+    force.get(a.id).y += dy * pull;
+    force.get(b.id).x -= dx * pull;
+    force.get(b.id).y -= dy * pull;
+  }
+
+  nodes.forEach((n) => { if (n.parent) applySpring(n.parent, n.id, SIM_LINK_DIST, SIM_LINK_K); });
+  state.links.forEach((l) => applySpring(l.a, l.b, SIM_LINK_DIST * 1.4, SIM_INDIRECT_K));
+
+  nodes.forEach((n) => {
+    if (!n.parent) return; // 6.4: メインテーマノードは固定座標で、あらゆる力の影響を受けない
+    const f = force.get(n.id);
+    n.x += f.x * simAlpha;
+    n.y += f.y * simAlpha;
+  });
+}
+
+function simLoop() {
+  simTick();
+  simAlpha *= 0.98;
+  render();
+  if (simAlpha > 0.01) {
+    requestAnimationFrame(simLoop);
+  } else {
+    simRunning = false;
+  }
+}
+
+// シート読込時・ノード数変化時に開始し、収束すれば自動停止する
+function startSimulation() {
+  simAlpha = 1;
+  if (simRunning) return;
+  simRunning = true;
+  requestAnimationFrame(simLoop);
+}
+
+// 座標は永続化しないため、読込・インポート直後に全ノードへ仮配置（根から順に親付近へ）を行う
+function seedPositions() {
+  const root = state.nodes.find((n) => !n.parent);
+  if (!root) return;
+  root.x = 0;
+  root.y = 0;
+  const queue = [root.id];
+  while (queue.length) {
+    const parent = nodeById(queue.shift());
+    childrenOf(parent.id).forEach((child) => {
+      const pos = placeChild(parent);
+      child.x = pos.x;
+      child.y = pos.y;
+      queue.push(child.id);
+    });
+  }
+}
+
 /* --- ノード接続（4.1 join モード） --- */
 function tryLink(id) {
   if (!joinStart) {
@@ -530,6 +720,7 @@ function tryLink(id) {
     snapshot();
     state.links.push({ id: uid('l'), a: joinStart, b: id, comment: '' });
     render();
+    startSimulation();
     toast('間接エッジを作成しました');
   }
   cancelJoin();
@@ -542,7 +733,16 @@ function removeLink(linkId) {
   snapshot();
   state.links = state.links.filter((l) => l.id !== linkId);
   render();
+  startSimulation();
   toast('間接エッジを削除しました');
+}
+function openEdgeEditPanel(link, x, y) {
+  openEditPanel({
+    x, y, hasTitle: false, comment: link.comment,
+    commentPlaceholder: 'エッジのコメントを入力（任意）',
+    onSave: (_title, comment) => { snapshot(); link.comment = comment; render(); toast('コメントを更新しました'); },
+    onDelete: () => removeLink(link.id),
+  });
 }
 
 /* --- グループ化（4.1 group モード） --- */
@@ -551,10 +751,10 @@ function openGroupMenu(nodeId, x, y) {
   const currentGroup = state.groups.find((g) => g.members.includes(nodeId));
   const entries = [];
   state.groups.forEach((g) => {
-    if (g !== currentGroup) entries.push({ label: g.title, action: () => addToGroup(nodeId, g.id) });
+    if (g !== currentGroup) entries.push({ label: g.title, dot: g.color, action: () => addToGroup(nodeId, g.id) });
   });
-  entries.push({ label: '＋ 新規グループ', action: () => createGroupWith(nodeId) });
-  if (currentGroup) entries.push({ label: '除外', action: () => removeFromGroup(nodeId, currentGroup.id) });
+  entries.push({ label: '新規グループ', icon: 'plus', action: () => openGroupCreatePanel(nodeId, x, y) });
+  if (currentGroup) entries.push({ label: '除外', icon: 'log-out', action: () => removeFromGroup(nodeId, currentGroup.id) });
 
   const root = document.createElement('div');
   root.className = 'wheel';
@@ -565,11 +765,17 @@ function openGroupMenu(nodeId, x, y) {
     item.className = 'item';
     item.style.left = (x + Math.cos(angle) * 110) + 'px';
     item.style.top = (y + Math.sin(angle) * 110) + 'px';
-    item.textContent = entry.label;
+    const iconHtml = entry.dot
+      ? `<span class="dot" style="background:${entry.dot}"></span>`
+      : `<i data-feather="${entry.icon}"></i>`;
+    item.innerHTML = `${iconHtml}<span class="tip">${entry.label}</span>`;
     item.addEventListener('click', (e) => { e.stopPropagation(); closeGroupMenu(); entry.action(); });
+    item.addEventListener('mouseenter', () => item.classList.add('active'));
+    item.addEventListener('mouseleave', () => item.classList.remove('active'));
     root.appendChild(item);
   });
   document.body.appendChild(root);
+  renderIcons();
   groupMenuRoot = root;
   setTimeout(() => window.addEventListener('mousedown', closeGroupMenuOnOutsideClick, { once: true }), 0);
 }
@@ -587,13 +793,16 @@ function addToGroup(nodeId, groupId) {
   render();
   toast('グループに追加しました');
 }
-function createGroupWith(nodeId) {
-  const title = prompt('新しいグループのタイトル', 'グループ');
-  if (title === null) return;
-  snapshot();
-  state.groups.push({ id: uid('gr'), members: [nodeId], title: title.trim() || 'グループ', comment: '', color: PASTELS[state.groups.length % PASTELS.length] });
-  render();
-  toast('グループを作成しました');
+function openGroupCreatePanel(nodeId, x, y) {
+  openEditPanel({
+    x, y, hasTitle: true, title: 'グループ', comment: '',
+    onSave: (title, comment) => {
+      snapshot();
+      state.groups.push({ id: uid('gr'), members: [nodeId], title: title || 'グループ', comment, color: PASTELS[state.groups.length % PASTELS.length] });
+      render();
+      toast('グループを作成しました');
+    },
+  });
 }
 function removeFromGroup(nodeId, groupId) {
   snapshot();
@@ -603,24 +812,58 @@ function removeFromGroup(nodeId, groupId) {
   render();
   toast('グループから除外しました');
 }
-function editGroup(groupId) {
-  const g = state.groups.find((x) => x.id === groupId);
-  if (!g) return;
-  const title = prompt('グループタイトル（空にすると削除）', g.title);
-  if (title === null) return;
-  snapshot();
-  if (!title.trim()) {
-    state.groups = state.groups.filter((x) => x.id !== groupId);
-    render();
-    toast('グループを削除しました');
-    return;
-  }
-  g.title = title.trim();
-  const comment = prompt('コメント', g.comment || '');
-  if (comment !== null) g.comment = comment;
-  render();
-  toast('グループを更新しました');
+function openGroupEditPanel(group, x, y) {
+  openEditPanel({
+    x, y, hasTitle: true, title: group.title, comment: group.comment,
+    onSave: (title, comment) => {
+      snapshot();
+      group.title = title || 'グループ';
+      group.comment = comment;
+      render();
+      toast('グループを更新しました');
+    },
+    onDelete: () => {
+      snapshot();
+      state.groups = state.groups.filter((g) => g.id !== group.id);
+      render();
+      toast('グループを削除しました');
+    },
+  });
 }
+
+/* --- 4.1 join/group: 簡易インライン編集パネル（ネイティブダイアログは使用しない） --- */
+function openEditPanel({ x, y, hasTitle, title, comment, commentPlaceholder, onSave, onDelete }) {
+  closeEditPanel();
+  el.editTitle.hidden = !hasTitle;
+  el.editTitle.value = title || '';
+  el.editComment.value = comment || '';
+  el.editComment.placeholder = commentPlaceholder || 'コメント';
+  el.editDelete.hidden = !onDelete;
+  el.editPanel.style.left = Math.min(x, window.innerWidth - 240) + 'px';
+  el.editPanel.style.top = Math.min(y, window.innerHeight - 180) + 'px';
+  el.editPanel.hidden = false;
+  renderIcons();
+  editPanelState = { onSave, onDelete };
+  (hasTitle ? el.editTitle : el.editComment).focus();
+}
+function closeEditPanel() {
+  el.editPanel.hidden = true;
+  editPanelState = null;
+}
+el.editConfirm.addEventListener('click', () => {
+  if (!editPanelState) return;
+  editPanelState.onSave && editPanelState.onSave(el.editTitle.value.trim(), el.editComment.value.trim());
+  closeEditPanel();
+});
+el.editDelete.addEventListener('click', () => {
+  if (!editPanelState) return;
+  editPanelState.onDelete && editPanelState.onDelete();
+  closeEditPanel();
+});
+el.editPanel.addEventListener('mousedown', (e) => e.stopPropagation());
+window.addEventListener('mousedown', (e) => {
+  if (!el.editPanel.hidden && !el.editPanel.contains(e.target)) closeEditPanel();
+});
 
 /* ============================================================
    描画
@@ -633,7 +876,7 @@ function render() {
   state.groups.forEach(renderGroup);
   state.nodes.forEach((n) => renderNode(n, null));
   state.nodes.forEach((n) => { if (n.parent) drawEdge(nodeById(n.parent), n, 'direct'); });
-  state.links.forEach((l) => drawEdge(nodeById(l.a), nodeById(l.b), 'indirect', l.id));
+  state.links.forEach((l) => drawEdge(nodeById(l.a), nodeById(l.b), 'indirect', l));
 
   if (proposal) renderProposal();
   renderNotes();
@@ -689,12 +932,12 @@ function renderGroup(g) {
   label.addEventListener('click', (e) => {
     if (mode !== 'group') return;
     e.stopPropagation();
-    editGroup(g.id);
+    openGroupEditPanel(g, e.clientX, e.clientY);
   });
   el.content.prepend(box); // ノード・エッジより背面に置く
 }
 
-function drawEdge(a, b, type, linkId) {
+function drawEdge(a, b, type, link) {
   if (!a || !b) return;
   const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
   line.setAttribute('x1', a.x + 20000);
@@ -702,23 +945,23 @@ function drawEdge(a, b, type, linkId) {
   line.setAttribute('x2', b.x + 20000);
   line.setAttribute('y2', b.y + 20000);
   if (type === 'direct') {
-    line.setAttribute('stroke', '#000');
+    line.setAttribute('stroke', 'var(--mono-900)');
     line.setAttribute('stroke-width', '1.5');
   } else if (type === 'indirect') {
-    line.setAttribute('stroke', '#9b9b9b');
+    line.setAttribute('stroke', 'var(--mono-500)');
     line.setAttribute('stroke-width', '1.2');
     line.setAttribute('stroke-dasharray', '6 6');
-    if (linkId) {
+    if (link) {
       line.style.pointerEvents = 'stroke';
       line.style.cursor = 'pointer';
       line.addEventListener('click', (e) => {
         if (mode !== 'join') return;
         e.stopPropagation();
-        removeLink(linkId);
+        openEdgeEditPanel(link, e.clientX, e.clientY);
       });
     }
   } else {
-    line.setAttribute('stroke', '#00e5ff');
+    line.setAttribute('stroke', 'var(--ai-cyan)');
     line.setAttribute('stroke-width', '1.6');
     line.setAttribute('stroke-dasharray', '4 6');
   }
@@ -808,6 +1051,7 @@ el.content.addEventListener('mousedown', (e) => {
     const child = addChild(id, '');
     render();
     if (child) startEdit(child.id);
+    startSimulation();
     return;
   }
   if (mode === 'edit') {
@@ -823,6 +1067,7 @@ el.content.addEventListener('mousedown', (e) => {
       snapshot();
       removeNode(id);
       render();
+      startSimulation();
       toast('ノードを削除しました');
     }, 800);
     return;
@@ -898,12 +1143,13 @@ function openWheel(kind, entries, interactive = true) {
     item.className = 'item';
     item.style.left = (center.x + Math.cos(angle) * radius) + 'px';
     item.style.top = (center.y + Math.sin(angle) * radius) + 'px';
-    item.textContent = entry.label;
+    item.innerHTML = `<i data-feather="${entry.icon}"></i><span class="tip">${entry.label}</span>`;
     root.appendChild(item);
     return { el: item, angle, entry };
   });
 
   document.body.appendChild(root);
+  renderIcons();
   wheelUI.open = kind;
   wheelUI.root = root;
   wheelUI.items = items;
@@ -921,7 +1167,7 @@ function setActiveWheelItem(index) {
 // マウスホイールでのモード切替時に、現在のモードをホイールUIで一瞬示す
 function flashModeWheel() {
   if (rightHeld) return; // 対話的なホイール表示中は上書きしない
-  openWheel('mode', MODES.map((m) => ({ label: MODE_LABEL[m], value: m })), false);
+  openWheel('mode', MODES.map((m) => ({ label: MODE_META[m].label, icon: MODE_META[m].icon, value: m })), false);
   setActiveWheelItem(MODES.indexOf(mode));
   flashTimer = setTimeout(closeWheel, 700);
 }
@@ -955,7 +1201,7 @@ window.addEventListener('mousedown', (e) => {
   if (e.button !== 2 || rightHeld || editingId || e.target.closest('.ui')) return;
   rightHeld = true;
   aiTargetId = hoverId; // AIホイールに切り替わった場合の対象ノードとして先に確定しておく
-  openWheel('mode', MODES.map((m) => ({ label: MODE_LABEL[m], value: m })));
+  openWheel('mode', MODES.map((m) => ({ label: MODE_META[m].label, icon: MODE_META[m].icon, value: m })));
 });
 
 window.addEventListener('mouseup', (e) => {
@@ -973,24 +1219,18 @@ window.addEventListener('mouseup', (e) => {
 window.addEventListener('keydown', (e) => {
   if (e.key !== 'Shift' || e.repeat || !rightHeld || wheelUI.open !== 'mode') return;
   aiTargetId = hoverId;
-  openWheel('ai', AI_ACTIONS.map((a) => ({ label: a.label, value: a.key })));
+  openWheel('ai', AI_ACTIONS.map((a) => ({ label: a.label, icon: a.icon, value: a.key })));
 });
 window.addEventListener('keyup', (e) => {
   if (e.key !== 'Shift' || !rightHeld || wheelUI.open !== 'ai') return;
-  openWheel('mode', MODES.map((m) => ({ label: MODE_LABEL[m], value: m })));
+  openWheel('mode', MODES.map((m) => ({ label: MODE_META[m].label, icon: MODE_META[m].icon, value: m })));
 });
 
 /* ============================================================
-   4.2 / 4.4 / 4.5 AI によるトランザクション提案
+   4.2 / 4.3 / 4.5 AI によるトランザクション提案
    ============================================================ */
-const SAMPLE_IDEAS = [
-  '導線を1画面にまとめる', '初回オンボーディングを短縮', 'ショートカット中心の操作',
-  'オフラインでも使える', '手戻りしやすい履歴', '声で入力する', 'テンプレートから始める',
-  '成果物を自動で要約', '迷ったら他人の事例を見る', '目的を毎回思い出させる',
-];
-const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
-
-let aiTargetId = null;
+let currentModel = MOCK_MODELS[0];
+let systemPrompt = '';
 
 function targetNode() {
   return nodeById(aiTargetId) || nodeById(hoverId) || state.nodes[0];
@@ -1007,7 +1247,7 @@ function runAI(action) {
     title = `AI 深掘り: 「${target.text || '無題'}」`;
     for (let i = 0; i < 3; i++) {
       const pos = placeChild(target);
-      const node = { id: uid('g'), kind: 'idea', text: pick(SAMPLE_IDEAS), parent: target.id, x: pos.x + i * 30, y: pos.y + i * 95 };
+      const node = { id: uid('g'), kind: 'idea', text: pick(SAMPLE_IDEAS), parent: target.id, x: pos.x + i * 30, y: pos.y + i * 30 };
       ghosts.push(node);
       ops.push(`「${target.text || '無題'}」に子ノード「${node.text}」を追加`);
     }
@@ -1016,7 +1256,7 @@ function runAI(action) {
     const root = state.nodes[0];
     for (let i = 0; i < 2; i++) {
       const pos = placeChild(root);
-      const node = { id: uid('g'), kind: 'idea', text: pick(SAMPLE_IDEAS), parent: root.id, x: pos.x - 120 + i * 240, y: pos.y - 260 };
+      const node = { id: uid('g'), kind: 'idea', text: pick(SAMPLE_IDEAS), parent: root.id, x: pos.x + i * 30, y: pos.y - 40 };
       ghosts.push(node);
       ops.push(`新しい視点のノード「${node.text}」をメインテーマ直下に追加`);
     }
@@ -1108,6 +1348,7 @@ function commitProposal() {
   proposal = null;
   el.proposal.classList.remove('show');
   render();
+  startSimulation();
   toast('AIの提案をコミットしました');
 }
 
@@ -1123,7 +1364,7 @@ document.getElementById('btn-commit').addEventListener('click', commitProposal);
 document.getElementById('btn-reject').addEventListener('click', rejectProposal);
 
 /* ============================================================
-   4.6 ひとりごとメモ
+   4.7 ひとりごとメモ
    ============================================================ */
 const mutter = document.getElementById('mutter-input');
 mutter.addEventListener('keydown', (e) => {
@@ -1146,43 +1387,160 @@ mutter.addEventListener('keydown', (e) => {
 });
 
 /* ============================================================
-   4.7 保存 / 読込・エクスポート / インポート
+   4.8 シートの保存/読込・エクスポート/インポート（複数シート管理。8.2/8.3参照）
    ============================================================ */
-document.getElementById('btn-save').addEventListener('click', () => {
-  localStorage.setItem('bs-mock-sheet', JSON.stringify(state));
+const SHEETS_INDEX_KEY = 'bs-mock-sheets-index';
+const sheetBodyKey = (id) => 'bs-mock-sheet-' + id;
+const uidSheet = () => 'sheet_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+
+function loadSheetsIndex() {
+  return JSON.parse(localStorage.getItem(SHEETS_INDEX_KEY) || '[]');
+}
+function saveSheetsIndex(list) {
+  localStorage.setItem(SHEETS_INDEX_KEY, JSON.stringify(list));
+}
+
+// 8.1.1: 内部保存形式は座標を含まない本体のみ
+function serializeBody() {
+  return {
+    nodes: state.nodes.map(({ x, y, ...rest }) => rest),
+    links: state.links,
+    groups: state.groups,
+    notes: state.notes,
+  };
+}
+
+function renderSheetTitle() {
+  el.sheetTitle.textContent = sheetTitle;
+}
+
+function resetHistory() {
+  past.length = 0; // 4.4: 読込を跨いで変更履歴は保持しない
+  future.length = 0;
+  syncToolbar();
+}
+
+function createNewSheet() {
+  currentSheetId = uidSheet();
+  sheetTitle = '';
+  state = blankBody();
+  seq = 1;
+  resetHistory();
+  const now = new Date().toISOString();
+  const index = loadSheetsIndex();
+  index.push({ id: currentSheetId, title: sheetTitle, createdAt: now, updatedAt: now });
+  saveSheetsIndex(index);
+  localStorage.setItem(sheetBodyKey(currentSheetId), JSON.stringify(serializeBody()));
+  renderSheetTitle();
+  render();
+  toast('新規シートを作成しました');
+}
+
+function saveCurrentSheet() {
+  if (!currentSheetId) { createNewSheet(); return; }
+  const now = new Date().toISOString();
+  const index = loadSheetsIndex();
+  const entry = index.find((s) => s.id === currentSheetId);
+  if (entry) { entry.title = sheetTitle; entry.updatedAt = now; }
+  saveSheetsIndex(index);
+  localStorage.setItem(sheetBodyKey(currentSheetId), JSON.stringify(serializeBody()));
   toast('シートを保存しました');
-});
-document.getElementById('btn-load').addEventListener('click', () => {
-  const raw = localStorage.getItem('bs-mock-sheet');
-  if (!raw) return toast('保存されたシートがありません');
+}
+
+function loadSheet(id) {
+  const raw = localStorage.getItem(sheetBodyKey(id));
+  if (!raw) return toast('シートが見つかりません');
+  const entry = loadSheetsIndex().find((s) => s.id === id);
+  currentSheetId = id;
+  sheetTitle = entry ? entry.title : '';
   state = JSON.parse(raw);
   bumpSeq();
-  past.length = 0; // 4.3: 読込を跨いで変更履歴は保持しない
-  future.length = 0;
-  syncToolbar();
+  resetHistory();
+  seedPositions();
+  renderSheetTitle();
   render();
+  startSimulation();
+  closeSheetPanel();
   toast('シートを読み込みました');
-});
-document.getElementById('btn-export').addEventListener('click', () => {
-  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+}
+
+function openSheetPanel() {
+  const index = loadSheetsIndex().slice().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  el.sheetList.innerHTML = index.length
+    ? index.map((s) => `<div class="row" data-id="${s.id}"><span class="t">${s.title || '無題のシート'}</span><span class="d">${new Date(s.updatedAt).toLocaleString()}</span></div>`).join('')
+    : '<div class="empty">保存されたシートがありません</div>';
+  el.sheetPanel.hidden = false;
+  renderIcons();
+}
+function closeSheetPanel() {
+  el.sheetPanel.hidden = true;
+}
+
+function exportSheet() {
+  const now = new Date().toISOString();
+  const entry = loadSheetsIndex().find((s) => s.id === currentSheetId);
+  const payload = {
+    metadata: { title: sheetTitle, created_at: entry ? entry.createdAt : now, updated_at: now },
+    ...serializeBody(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'brainstorm-sheet.json';
+  a.download = (sheetTitle || 'brainstorm-sheet') + '.json';
   a.click();
   URL.revokeObjectURL(a.href);
+}
+
+function importSheetFile(file) {
+  file.text().then((text) => {
+    const parsed = JSON.parse(text);
+    const now = new Date().toISOString();
+    // 8.1.1: インポートは常に新規シートとして扱う
+    currentSheetId = uidSheet();
+    sheetTitle = (parsed.metadata && parsed.metadata.title) || '';
+    state = {
+      nodes: parsed.nodes || [],
+      links: parsed.links || [],
+      groups: parsed.groups || [],
+      notes: parsed.notes || [],
+    };
+    seq = 1;
+    bumpSeq();
+    resetHistory();
+    const index = loadSheetsIndex();
+    index.push({ id: currentSheetId, title: sheetTitle, createdAt: now, updatedAt: now });
+    saveSheetsIndex(index);
+    seedPositions();
+    localStorage.setItem(sheetBodyKey(currentSheetId), JSON.stringify(serializeBody()));
+    renderSheetTitle();
+    render();
+    startSimulation();
+    toast('シートをインポートしました');
+  });
+}
+
+el.sheetTitle.addEventListener('blur', () => {
+  sheetTitle = el.sheetTitle.textContent.trim();
+  el.sheetTitle.textContent = sheetTitle;
 });
+el.sheetTitle.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); el.sheetTitle.blur(); }
+});
+
+document.getElementById('btn-new').addEventListener('click', createNewSheet);
+document.getElementById('btn-open').addEventListener('click', openSheetPanel);
+document.getElementById('btn-save').addEventListener('click', saveCurrentSheet);
+document.getElementById('btn-export').addEventListener('click', exportSheet);
 document.getElementById('btn-import').addEventListener('click', () => el.file.click());
-el.file.addEventListener('change', async () => {
+document.getElementById('sheet-panel-close').addEventListener('click', closeSheetPanel);
+el.sheetList.addEventListener('click', (e) => {
+  const row = e.target.closest('.row');
+  if (row) loadSheet(row.dataset.id);
+});
+el.file.addEventListener('change', () => {
   const file = el.file.files[0];
-  if (!file) return;
-  state = JSON.parse(await file.text());
-  bumpSeq();
-  past.length = 0; // 4.3: 読込を跨いで変更履歴は保持しない
-  future.length = 0;
-  syncToolbar();
+  if (file) importSheetFile(file);
   el.file.value = '';
-  render();
-  toast('シートをインポートしました');
 });
 
 document.getElementById('btn-undo').addEventListener('click', undo);
@@ -1190,18 +1548,18 @@ document.getElementById('btn-redo').addEventListener('click', redo);
 
 window.addEventListener('keydown', (e) => {
   if (editingId || e.target.tagName === 'TEXTAREA') return;
-  if (e.key === 'Escape') { rejectProposal(); closeWheel(); }
+  if (e.key === 'Escape') { rejectProposal(); closeWheel(); closeSheetPanel(); closeEditPanel(); }
   if (e.key === 'Enter' && proposal) commitProposal();
   if (e.ctrlKey && e.key.toLowerCase() === 'z') { e.shiftKey ? redo() : undo(); }
 });
 
 /* ============================================================
-   6.2 AIモデル選択（右下・常設・上方向に開く）
+   4.2 AIモデル選択・システムプロンプト（右下・常設・上方向に開く）
    ============================================================ */
 const modelBtn = document.getElementById('model-btn');
 const modelMenu = document.getElementById('model-menu');
 const modelName = document.getElementById('model-name');
-let currentModel = MOCK_MODELS[0];
+const systemPromptInput = document.getElementById('system-prompt');
 
 function renderModelMenu() {
   modelName.textContent = currentModel;
@@ -1211,26 +1569,27 @@ function renderModelMenu() {
 }
 modelBtn.addEventListener('click', (e) => {
   e.stopPropagation();
-  modelMenu.classList.toggle('show');
+  modelMenu.hidden = !modelMenu.hidden;
 });
 modelMenu.addEventListener('click', (e) => {
   const opt = e.target.closest('.opt');
   if (!opt) return;
   currentModel = opt.dataset.model;
   renderModelMenu();
-  modelMenu.classList.remove('show');
+  modelMenu.hidden = true;
   toast(`モデルを切り替えました: ${currentModel}`);
 });
+systemPromptInput.addEventListener('input', () => { systemPrompt = systemPromptInput.value; });
 window.addEventListener('mousedown', (e) => {
-  if (!e.target.closest('#model-select')) modelMenu.classList.remove('show');
+  if (!e.target.closest('#model-select')) modelMenu.hidden = true;
 });
-renderModelMenu();
 
 /* --- 初期化 --- */
+renderIcons();
 setMode('view');
 applyCamera();
-syncToolbar();
-render();
+renderModelMenu();
+createNewSheet();
 startEdit('n0');
 </script>
 </body>
