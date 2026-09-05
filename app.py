@@ -1,69 +1,80 @@
+# ============================================================
+# プレースホルダーファイル。
+# 実装時には、このコメントを含む全てのプレースホルダーコメントを削除すること。
+# ============================================================
+#
+# Flaskルーティング（design-document.md 8.2 API設計）。
+# ビジネスロジックは services/ に委譲し、ここはルーティングのみに専念する（7.5参照）。
+
 from flask import Flask, request, jsonify, send_from_directory
-from openai import OpenAI
+
+# from services import database_service, ai_service, sheet_format_service
 
 app = Flask(__name__)
-
-if app.debug:
-    @app.after_request
-    def add_header(response):
-        if request.endpoint == 'static':
-            response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, max-age=0'
-            response.headers['Pragma'] = 'no-cache'
-            response.headers['Expires'] = '0'
-        return response
-
-
-client = OpenAI(
-    base_url="http://localhost:11434/v1",
-    api_key="ollama",
-)
-OLLAMA_MODEL = "qwen2.5-coder:0.5b"
 
 
 @app.route('/')
 def index():
+    # トップページ（static/index.html）を返す
     return send_from_directory(app.static_folder, 'index.html')
 
 
-@app.route('/send_api', methods=['POST'])
-def send_api():
-    data = request.get_json()
+@app.route('/models', methods=['GET'])
+def get_models():
+    # TODO: GET /models — 利用可能なモデル一覧を返す（ai_service.list_models）
+    pass
 
-    if not data or 'text' not in data:
-        app.logger.error("Request JSON is missing or does not contain 'text' field.")
-        return jsonify({"error": "Missing 'text' in request body"}), 400
 
-    received_text = data['text']
-    if not received_text.strip():
-        app.logger.error("Received text is empty or whitespace.")
-        return jsonify({"error": "Input text cannot be empty"}), 400
+@app.route('/sheets', methods=['GET'])
+def get_sheets():
+    # TODO: GET /sheets — シート一覧 {id, title, updated_at} を返す（database_service.list_sheets）
+    pass
 
-    system_prompt = "140字以内で回答してください。"
-    if 'context' in data and data['context'] and data['context'].strip():
-        system_prompt = data['context'].strip()
-        app.logger.info(f"Using custom system prompt from context: {system_prompt}")
-    else:
-        app.logger.info(f"Using default system prompt: {system_prompt}")
 
-    try:
-        chat_completion = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": received_text}
-            ],
-            model=OLLAMA_MODEL,
-        )
+@app.route('/sheet', methods=['POST'])
+def create_sheet():
+    # TODO: POST /sheet — 新規シートを作成しIDを払い出す（database_service.create_sheet）
+    pass
 
-        if chat_completion.choices and chat_completion.choices[0].message:
-            processed_text = chat_completion.choices[0].message.content
-        else:
-            processed_text = "AIから有効な応答がありませんでした。"
 
-        return jsonify({"message": "AIによってデータが処理されました。", "processed_text": processed_text})
+@app.route('/sheet/<sheet_id>', methods=['GET'])
+def get_sheet(sheet_id):
+    # TODO: GET /sheet/{id} — シートを読み込む。app_state.last_opened_sheet_id を更新する
+    pass
 
-    except Exception as e:
-        app.logger.error(f"Ollama API call failed: {e}")
-        return jsonify({"error": f"AIサービスとの通信中にエラーが発生しました。"}), 500
+
+@app.route('/sheet/<sheet_id>', methods=['PUT'])
+def update_sheet(sheet_id):
+    # TODO: PUT /sheet/{id} — シートを保存する（database_service.update_sheet）
+    pass
+
+
+@app.route('/sheet/<sheet_id>', methods=['DELETE'])
+def delete_sheet(sheet_id):
+    # TODO: DELETE /sheet/{id} — シートを削除する（初期実装では物理削除）
+    pass
+
+
+@app.route('/ai', methods=['POST'])
+def request_ai():
+    # TODO: POST /ai — 指定シートに対してAIにトランザクションの提案を行わせる
+    # req: {model_name, mode, sheet_id, target_node_id}
+    # 呼び出し前提: フロントが直前に PUT /sheet/{id} で自動保存済みであること
+    # 成功時(200): {title, ops, ghosts, removes, links, group, note, merge}（4.3参照）
+    # 失敗時: 共通エラー形式 {error: {code, message}}（validation/not_found/llm_unavailable/llm_timeout/internal_error）
+    pass
+
+
+@app.route('/state', methods=['GET'])
+def get_state():
+    # TODO: GET /state — app_state の全キーの値をまとめて返す
+    pass
+
+
+@app.route('/state', methods=['PUT'])
+def update_state():
+    # TODO: PUT /state — 渡されたキーのみ部分更新する（マージ更新）
+    pass
 
 
 if __name__ == '__main__':
