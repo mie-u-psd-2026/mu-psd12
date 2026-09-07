@@ -1,24 +1,21 @@
-// ============================================================
-// プレースホルダーファイル。
-// 実装時には、このコメントを含む全てのプレースホルダーコメントを削除すること。
-// ============================================================
-// 直接エッジ（実線）・間接エッジ（破線）の描画（4.1, 6.1）。
-// joinモード中、間接エッジのクリックで EditPanel を開く（コメント編集・削除）。
-
+// 直接エッジを実線、間接エッジを破線で描画する。
+// コンポーネントの識別名。
 const name = 'SheetEdge';
-
+// 両端の表示座標。
 const props = {
-  // TODO: from, to, type（'direct' | 'indirect' | 'ai'）, link（間接エッジのみ: id, comment）
+  type: { type: String, default: 'direct' },
+  from: { type: Object, required: true },
+  to: { type: Object, required: true },
 };
+// この描画部品が発火するイベント。
+const emits = [];
 
-const emits = [
-  // TODO: 'edit-requested'（joinモード中のクリック時）
-];
-
-function setup(props, { emit }) {
+// 追加の状態を持たない描画部品の設定を返す。
+function setup() {
   return {};
 }
 
-const template = ``;
+// ノードの中心同士を、接続種別に応じた線で結ぶ。
+const template = `<line :x1="from.x" :y1="from.y" :x2="to.x" :y2="to.y" class="sheet-edge" :class="{ 'is-indirect': type === 'indirect' }" />`;
 
 export default { name, props, emits, setup, template };

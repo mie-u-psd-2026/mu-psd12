@@ -1,21 +1,15 @@
-// ============================================================
-// プレースホルダーファイル。
-// 実装時には、このコメントを含む全てのプレースホルダーコメントを削除すること。
-// ============================================================
-// ノート一覧表示（4.6の成果物）。常設UIとして配置する（6.2）。
-
+// シート内のノートを一覧で表示する。
+// コンポーネントの識別名。
 const name = 'NotesPanel';
-
-const props = {
-  // TODO: notes（[{id, title, body}]）
-};
-
+// シートから渡されるノート一覧。
+const props = { notes: { type: Array, default: () => [] } };
+// 通知イベントは持たない。
 const emits = [];
-
-function setup(props) {
-  return {};
-}
-
-const template = ``;
-
+// 追加の状態を持たない描画設定を返す。
+function setup() { return {}; }
+// 境界線のない常設ノート一覧。
+const template = `<section class="notes-panel" aria-label="ノート"><h2>ノート</h2>
+  <p v-if="!notes.length" class="muted">ノートはまだありません</p>
+  <details v-for="note in notes" :key="note.id"><summary>{{ note.title }}</summary><p class="note-body">{{ note.body }}</p></details>
+</section>`;
 export default { name, props, emits, setup, template };
