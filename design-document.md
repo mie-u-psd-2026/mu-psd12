@@ -433,20 +433,39 @@ RESTful設計に準ずる。
 
 エンドポイント一覧  
 
-- `POST /ai`: 指定したシートに対してAIにトランザクションの提案を行わせる
-  - `req: {model_name: string, mode: string, sheet_id: string, target_node_id: string}`
-  - 呼び出し前提: フロントは呼び出し直前に `PUT /sheet/{id}` で自動保存し、未保存の変更を確実に反映させる
-  - 成功時(200): `{title: string, ops: string[], ghosts: [...], removes: [...], links: [...], group: {...}, note: {...}, merge: boolean}`（4.3のトランザクション提案と同じ形状）
-  - 失敗時: 共通エラー形式
+リクエスト/レスポンスボディの形状は曖昧さを排すため、全エンドポイントで具体例を示す。ラップするのは共通エラー形式（`error`）と`GET /models`の`data`（OpenAI互換形式の踏襲）のみとし、それ以外は極力フラットな構造に統一する。8.1.1のシート本体（`nodes`/`links`/`groups`/`notes`）はAPI境界でも同じ形状のまま、`body`等のキーで包まずメタデータと同階層に展開する。  
+
 - `GET /models`: 利用可能なモデル一覧を返す
-- `GET /sheets`: シート一覧（`{id, title, updated_at}`の配列）を返す
+  - 成功時(200): `{"data": [{"id": "qwen3.5:0.8b"}, ...]}`（OllamaのOpenAI互換`/v1/models`の応答形式をそのまま透過する）
+  - 失敗時: 共通エラー形式（`llm_unavailable`）
+- `GET /sheets`: シート一覧を返す
+  - 成功時(200): `[{"id": "...", "title": "...", "updated_at": "..."}, ...]`（bare配列。ラップしない）
 - `POST /sheet`: 新規シートを作成しIDを払い出す
+  - `req: {"title": "無題"}`
+  - 成功時(201): `{"id": "..."}`
 - `GET /sheet/{id}`: シートを読み込む
-  - 呼び出し時にapp_state.last_opened_sheet_idを更新する
-- `PUT /sheet/{id}`: シートを保存する
+  - 呼び出し時に`app_state.last_opened_sheet_id`を更新する
+  - 成功時(200): `{"id": "...", "title": "...", "created_at": "...", "updated_at": "...", "nodes": [...], "links": [...], "groups": [...], "notes": [...]}`（メタデータとシート本体を同階層にフラット展開する）
+  - 失敗時: 共通エラー形式（`not_found`）
+- `PUT /sheet/{id}`: シートを保存する（部分更新ではなく全体上書き）
+  - `req: {"title": "...", "nodes": [...], "links": [...], "groups": [...], "notes": [...]}`（`GET /sheet/{id}`のレスポンスから`id`/`created_at`/`updated_at`を除いた形）
+  - 成功時(200): `{"ok": true}`
+  - 失敗時: 共通エラー形式（`validation`/`not_found`）
 - `DELETE /sheet/{id}`: シートを削除する（初期実装では物理削除。論理削除は将来拡張）
+  - 成功時(200): `{"ok": true}`
+  - 失敗時: 共通エラー形式（`not_found`）
 - `GET /state`: 保存されている全キーの値をまとめて返す
+  - 成功時(200): `{"last_used_model": "...", "user_prompt": "...", "last_opened_sheet_id": "..."}`（キーバリューを直接返す。ラップしない）
 - `PUT /state`: 渡されたキーのみ部分更新する（マージ更新。存在しないキーは新規追加）
+  - `req: {"last_used_model": "..."}`（更新したいキーのみを直接送る。ラップしない）
+  - 成功時(200): `{"ok": true}`
+  - 失敗時: 共通エラー形式（`validation`）
+- `POST /ai`: 指定したシートに対してAIにトランザクションの提案を行わせる
+  - `req: {"model_name": "...", "mode": "...", "sheet_id": "...", "target_node_id": "...", "system_prompt": "..."}`
+    - `target_node_id`は空文字列`""`を許容する。空文字列の場合はシート全体を対象とする（4.5参照）。サーバー側は`None`判定のみで必須チェックを行い、空文字列を未指定として扱わない
+  - 呼び出し前提: フロントは呼び出し直前に `PUT /sheet/{id}` で自動保存し、未保存の変更を確実に反映させる
+  - 成功時(200): `{"title": "...", "ops": [...], "ghosts": [...], "removes": [...], "links": [...], "group": {...}, "note": {...}, "merge": false}`（4.3のトランザクション提案と同じ形状）
+  - 失敗時: 共通エラー形式
 
 ### 8.3 DB設計
 
