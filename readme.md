@@ -74,6 +74,16 @@ ollama pull qwen2.5-coder:0.5b
   pip install -r requirements.txt
   ```
 
+- `.env` ファイル作成
+
+  以下のコマンドで `.env.example` をコピーして `.env` を作成します。
+
+  ```
+  copy .env.example .env
+  ```
+
+  > `.env` は `.gitignore` によってGit管理から外されています。必要に応じて値を書き換えてください。
+
 # 実行方法
 
 - 以下のコマンドでサーバを起動します。
