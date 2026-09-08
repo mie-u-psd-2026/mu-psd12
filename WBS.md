@@ -76,18 +76,18 @@
 
 #### コアビジネスロジック実装 (9/3 - 9/5 BE)
 
-- [ ] `database_service.py`: sheets/app_stateテーブル、シート本体ファイルI/O
-- [ ] `sheet_format_service.py`: 8.1.2パイプ区切り記法のシリアライズ・パース
-- [ ] `ai_service.py`: Ollamaモデル一覧取得・トランザクション提案生成
+- [x] `database_service.py`: sheets/app_stateテーブル、シート本体ファイルI/O
+- [x] `sheet_format_service.py`: 8.1.2パイプ区切り記法のシリアライズ・パース
+- [x] `ai_service.py`: Ollamaモデル一覧取得・トランザクション提案生成
 
 #### APIエンドポイント実装・単体テスト (9/5 - 9/8 PM/BE)
 
-- [ ] `GET /models`
-- [ ] `GET /sheets` / `POST /sheet`
-- [ ] `GET` / `PUT` / `DELETE` `/sheet/{id}`
-- [ ] `POST /ai`
-- [ ] `GET` / `PUT` `/state`
-- [ ] 共通エラー形式の実装・単体テスト
+- [x] `GET /models`
+- [x] `GET /sheets` / `POST /sheet`
+- [x] `GET` / `PUT` / `DELETE` `/sheet/{id}`
+- [x] `POST /ai`
+- [x] `GET` / `PUT` `/state`
+- [x] 共通エラー形式の実装・単体テスト
 
 ### 機能実装完了・コードフリーズ (9/8 PM/ALL)
 
