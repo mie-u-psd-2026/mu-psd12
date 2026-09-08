@@ -8,6 +8,7 @@
 - コーディング規約は design-document.md 7章に従う
 - 自身の作業ブランチ名が自身の担当を表す（PM: `pm`, FE: `frontend`, BE: `backend`）
 - [WBS.md](WBS.md) をもとに作業を進め、完了した項目にはチェックを付ける
+- Pythonの実行（`python app.py` / `pip install` / テスト実行等）は必ず `.venv` 仮想環境をアクティベートした状態で行う（構築手順は [readme.md](readme.md) 参照）
 
 ## フロントエンド担当
 
