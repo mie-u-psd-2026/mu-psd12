@@ -179,14 +179,19 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .muted { color: var(--mono-500); font-size: 12px; }
 .ai-accent { color: var(--ai-cyan-dim); }
 .sheet-workspace { position: absolute; inset: 0; }
+/* FIX: 33行目のbackground-imageを重複定義で上書き */
 .sheet-canvas { background-image: radial-gradient(var(--mono-300) .75px, transparent .75px); }
+/* FIX: app-header(44行目)/sheet-header(63行目)のz-indexを重複定義で上書き */
 .app-header, .sheet-header, .left-tools, .right-tools { z-index: 2; }
 .app-header { background: linear-gradient(90deg, white 75%, transparent); padding: 0 24px 16px 0; }
 .mode-hud { padding: 0; font-size: 14px; }
 .sheet-header { width: 336px; }
+/* FIX: 67行目のwidthを重複定義で上書き */
 .sheet-title { width: 100%; }
 .save-state { display: block; text-align: right; font-size: 11px; color: var(--mono-500); margin-top: 8px; }
+/* FIX: 86行目のmargin-topを重複定義で上書き */
 .sheet-toolbar { margin-top: 8px; }
+/* FIX: 133-134行目のmin-height/margin-topを重複定義で上書き */
 .toolbar-status { line-height: 1.6; margin-top: 32px; min-height: 20px; }
 .error-message { color: #a42b2b; }
 .left-tools, .right-tools { position: absolute; bottom: 56px; width: 248px; }
@@ -213,6 +218,7 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .model-options p { padding: 8px; font-size: 12px; }
 .model-settings label { text-align: right; }
 .proposal-region { position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%); width: min(400px, 32vw); }
+/* FIX: 152-153行目のleft/bottom/font-sizeを重複定義で上書き */
 .canvas-hint { left: 50%; bottom: 16px; transform: translateX(-50%); white-space: nowrap; font-size: 11px; }
 .sheet-list { background: var(--mono-bg); padding: 24px; max-height: 48vh; overflow-y: auto; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
@@ -276,6 +282,7 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .settings-status { font-size: 11px; line-height: 1.6; color: var(--mono-700); }
 .settings-status.error-message { color: #a42b2b; }
 .sheet-list li { display: flex; align-items: center; gap: 8px; }
+/* FIX: white-spaceを重複定義で再上書き（上記canvas-hintのnowrapと競合） */
 .canvas-hint { max-width: calc(100vw - 64px); white-space: normal; text-align: center; }
 
 .is-removed .node-button { border-style: dashed; border-color: var(--ai-cyan-dim); }
