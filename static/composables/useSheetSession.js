@@ -4,6 +4,8 @@ import { useSheetState } from './useSheetState.js';
 import { useUndoRedo } from './useUndoRedo.js';
 import { useApiClient } from './useApiClient.js';
 import { createEmptySheet, parseSheet } from '../utils/sheet_format.js';
+import { removeNode, addLink, addGroup, moveToGroup, detachMembers } from '../utils/sheet_operations.js';
+import { prepareProposal } from '../utils/ai_proposal.js';
 
 // 画面から呼び出すシート操作と表示状態を返す。
 export function useSheetSession() {
@@ -18,6 +20,10 @@ export function useSheetSession() {
   const isBusy = ref(false);
   const message = ref('');
   const hasError = ref(false);
+  const proposal = ref(null);
+  const isLocked = computed(() => isBusy.value || !!proposal.value);
+  let proposalBase = '';
+  let proposalSheet = null;
   const sheets = ref([]);
   const isListOpen = ref(false);
   const pendingAction = ref(null);
@@ -37,12 +43,66 @@ export function useSheetSession() {
 
   // 一操作を実行し、変更前後を履歴へ記録する。
   function edit(operation) {
-    if (isBusy.value) return;
+    if (isLocked.value) return false;
     const before = snapshot();
-    operation();
-    history.record(before, snapshot());
-    message.value = '';
+    try {
+      operation();
+      Object.assign(sheetState, parseSheet(sheetState));
+      history.record(before, snapshot());
+      notify('');
+      return true;
+    } catch (err) {
+      const original = JSON.parse(before);
+      title.value = original.title;
+      Object.assign(sheetState, parseSheet(original));
+      notify(err.message, true);
+      return false;
+    }
   }
+
+  // ノードを削除し、子と参照を安全に整理する。
+  function deleteNode(id) { return edit(() => removeNode(sheetState, id)); }
+  // 無向エッジを作成する。
+  function createLink(a, b) { return edit(() => addLink(sheetState, a, b)); }
+  // エッジのコメントを更新する。
+  function changeLink(id, comment) {
+    return edit(() => {
+      const link = sheetState.links.find(entry => entry.id === id);
+      if (!link) throw new Error('対象の接続がありません。');
+      link.comment = comment;
+    });
+  }
+  // エッジを削除する。
+  function deleteLink(id) { return edit(() => { sheetState.links = sheetState.links.filter(link => link.id !== id); }); }
+  // 新規グループを作成する。
+  function createGroup(members, name, comment, color) { return edit(() => addGroup(sheetState, members, name, comment, color)); }
+  // 既存グループへノードを移す。
+  function assignGroup(id, groupId) { return edit(() => moveToGroup(sheetState, id, groupId)); }
+  // グループからノードを除外する。
+  function excludeGroup(id) { return edit(() => detachMembers(sheetState, [id])); }
+  // グループのタイトル、コメント、色を更新する。
+  function changeGroup(id, name, comment, color) {
+    return edit(() => {
+      const group = sheetState.groups.find(entry => entry.id === id);
+      if (!group || !name.trim()) throw new Error('グループ名を入力してください。');
+      Object.assign(group, { title: name.trim(), comment, color });
+    });
+  }
+  // メンバーノードを保持したままグループを削除する。
+  function deleteGroup(id) { return edit(() => { sheetState.groups = sheetState.groups.filter(group => group.id !== id); }); }
+  // ノートを新規作成または更新する。
+  function saveNote(id, name, body) {
+    return edit(() => {
+      if (!name.trim()) throw new Error('ノートのタイトルを入力してください。');
+      if (!id) { sheetState.notes.push({ id: crypto.randomUUID(), title: name.trim(), body }); return; }
+      const note = sheetState.notes.find(entry => entry.id === id);
+      if (!note) throw new Error('対象のノートがありません。');
+      Object.assign(note, { title: name.trim(), body });
+    });
+  }
+  // ノートを削除する。
+  function deleteNote(id) { return edit(() => { sheetState.notes = sheetState.notes.filter(note => note.id !== id); }); }
+
 
   // タイトルを受け取り、空欄以外の編集を1履歴に記録する。
   function changeTitle(value) {
@@ -72,40 +132,40 @@ export function useSheetSession() {
 
   // 現在のスナップショットからひとつ前の履歴へ移動する。
   function undo() {
-    if (isBusy.value) return;
+    if (isLocked.value) return;
     restore(history.undo(snapshot()));
   }
 
   // 現在のスナップショットからひとつ先の履歴へ移動する。
   function redo() {
-    if (isBusy.value) return;
+    if (isLocked.value) return;
     restore(history.redo(snapshot()));
   }
 
   // 非同期操作中の重複実行を防ぎ、失敗を画面へ通知する。
   async function run(operation) {
-    if (isBusy.value) return;
+    if (isLocked.value) return;
     isBusy.value = true;
     notify('処理中…');
-    try { await operation(); } catch (err) { notify(err.message, true); }
+    try { await operation(); return true; } catch (err) { notify(err.message, true); return false; }
     finally { isBusy.value = false; }
   }
 
   // 未保存の編集がある場合だけ、切替前の確認を表示する。
   function requestSwitch(label, operation) {
-    if (isBusy.value) return;
+    if (isLocked.value) return;
     if (hasChanges.value) {
       pendingAction.value = { label, operation };
       return;
     }
-    operation();
+    return operation();
   }
 
   // 未保存変更の破棄が選ばれた後で、保留していた操作を実行する。
   function confirmSwitch() {
     const action = pendingAction.value;
     pendingAction.value = null;
-    action?.operation();
+    return action?.operation();
   }
 
   // シート切替の確認を閉じ、現在の編集を保持する。
@@ -134,22 +194,64 @@ export function useSheetSession() {
     });
   }
 
-  // シート本体をサーバーへ保存し、成功後に保存基準と履歴を更新する。
+  // シートの保存成功後、手動・自動を問わず履歴をリセットする。
+  async function persist() {
+    const body = parseSheet(sheetState);
+    const current = snapshot();
+    if (!sheetId.value) {
+      const data = await api.createSheet(title.value);
+      if (!data || typeof data.id !== 'string' || !data.id) throw new Error('新規シートIDを取得できませんでした。');
+      sheetId.value = data.id;
+    }
+    const data = await api.saveSheet(sheetId.value, { title: title.value, ...body });
+    updatedAt.value = data?.updated_at || new Date().toISOString();
+    savedSnapshot.value = current;
+    history.reset();
+    await api.updateState({ last_opened_sheet_id: sheetId.value });
+  }
+
+  // シートを保存し、成功を通知する。
   async function save() {
-    await run(async () => {
-      const body = parseSheet(sheetState);
-      const current = snapshot();
-      if (!sheetId.value) {
-        const data = await api.createSheet(title.value);
-        if (!data || typeof data.id !== 'string' || !data.id) throw new Error('新規シートIDを取得できませんでした。');
-        sheetId.value = data.id;
+    return run(async () => { await persist(); notify('保存しました。'); });
+  }
+
+  // 自動保存の成功後にAIを呼び、検証済みの提案を未確定の状態で表示する。
+  async function requestAi(request) {
+    if (!request.model_name) { notify('AIモデルを選択してください。', true); return false; }
+    return run(async () => {
+      if (request.target_node_id && !sheetState.nodes.some(node => node.id === request.target_node_id)) {
+        throw new Error('AIの対象ノードがありません。');
       }
-      const data = await api.saveSheet(sheetId.value, { title: title.value, ...body });
-      updatedAt.value = data?.updated_at || new Date().toISOString();
-      savedSnapshot.value = current;
-      history.reset();
-      notify('保存しました。');
+      await persist();
+      // ひとりごとの本文はtext、利用プロンプトはsystem_promptで渡す。
+      const data = await api.requestAi({ ...request, sheet_id: sheetId.value });
+      const prepared = prepareProposal(sheetState, data);
+      proposalBase = snapshot();
+      proposalSheet = sheetId.value;
+      proposal.value = prepared;
+      notify('破線の変更箇所を確認し、一括承認または却下してください。');
     });
+  }
+
+  // 提案の基準シートを確認し、一括変更を1履歴として適用する。
+  function commitProposal() {
+    if (isBusy.value || !proposal.value) return false;
+    if (proposalBase !== snapshot() || proposalSheet !== sheetId.value) {
+      proposal.value = null;
+      notify('提案後にシートが変わったため、もう一度AIを呼び出してください。', true);
+      return false;
+    }
+    const result = proposal.value.result;
+    proposal.value = null;
+    const success = edit(() => Object.assign(sheetState, parseSheet(result)));
+    if (success) notify('AI提案を一括適用しました。Undoで戻せます。');
+    return success;
+  }
+
+  // 未確定の提案だけを破棄し、シートには変更を加えない。
+  function rejectProposal() {
+    proposal.value = null;
+    notify('AI提案を却下しました。');
   }
 
   // 一覧パネルを開き、サーバーの保存済みシートを取得する。
@@ -168,14 +270,28 @@ export function useSheetSession() {
 
   // シートIDを受け取り、未保存変更を確認後に取得・検証して切り替える。
   function loadSheet(id) {
-    requestSwitch('シートを読み込む', () => run(async () => {
+    return requestSwitch('シートを読み込む', () => run(async () => {
       const data = await api.getSheet(id);
       const body = parseSheet(data);
       const metadata = data.metadata || data;
       if (typeof metadata.title !== 'string') throw new Error('シートタイトルが不正です。');
+      // GET /sheet はバックエンド側で最後に開いたシートを更新する。
       replaceSheet(body, metadata, id);
       notify('読み込みました。');
     }));
+  }
+
+  // 保存済みシートを確認後に削除する。現在の編集対象なら新規状態へ戻す。
+  function deleteSheet(id) {
+    if (isLocked.value) return;
+    pendingAction.value = { label: '保存済みシートを削除', title: 'シートを削除しますか？',
+      message: 'サーバーから削除します。この操作はUndoでは戻せません。', operation: () => run(async () => {
+        await api.deleteSheet(id);
+        sheets.value = sheets.value.filter(sheet => sheet.id !== id);
+        if (sheetId.value === id) replaceSheet(createEmptySheet(), { title: '無題のシート' }, null);
+        await api.updateState({ last_opened_sheet_id: sheetId.value });
+        notify('シートを削除しました。');
+      }) };
   }
 
   // 編集中の内容を自己完結したJSONファイルとしてダウンロードする。
@@ -212,8 +328,10 @@ export function useSheetSession() {
     });
   }
 
-  return { sheetState, title, sheetId, version, isBusy, message, hasError, hasChanges,
+  return { sheetState, title, sheetId, version, isBusy, isLocked, proposal, message, hasError, hasChanges,
     sheets, isListOpen, pendingAction, canUndo: history.canUndo, canRedo: history.canRedo,
-    changeTitle, createNode, changeNode, undo, redo, newSheet, save, openList,
+    changeTitle, createNode, changeNode, deleteNode, createLink, changeLink, deleteLink, createGroup, assignGroup, excludeGroup,
+    changeGroup, deleteGroup, saveNote, deleteNote, requestAi, commitProposal, rejectProposal,
+    undo, redo, newSheet, save, openList, deleteSheet,
     loadSheet, exportSheet, importSheet, confirmSwitch, cancelSwitch, notify };
 }

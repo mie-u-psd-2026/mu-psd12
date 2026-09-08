@@ -4,9 +4,10 @@ import { ref } from 'vue';
 const name = 'ModelSelect';
 // モデル一覧と選択済みの設定。
 const props = { models: { type: Array, default: () => [] }, currentModel: { type: String, default: '' },
-  systemPrompt: { type: String, default: '' }, isBusy: Boolean };
+  systemPrompt: { type: String, default: '' }, isBusy: Boolean, isLocked: Boolean,
+  status: { type: String, default: '' }, hasError: Boolean };
 // 設定変更とモデル一覧の再取得。
-const emits = ['modelChanged', 'promptChanged', 'refresh'];
+const emits = ['modelChanged', 'promptChanged', 'refresh', 'saveSettings'];
 // ドロップダウンの開閉と、設定操作のハンドラを返す。
 function setup(props, { emit }) {
   const isOpen = ref(false);
@@ -22,9 +23,11 @@ function setup(props, { emit }) {
   function handleFocusOut(event) {
     if (!event.currentTarget.contains(event.relatedTarget)) isOpen.value = false;
   }
+  // 設定保存を再試行する。
+  function handleSave() { emit('saveSettings'); }
   // Escapeで候補を閉じる。
   function handleClose() { isOpen.value = false; }
-  return { isOpen, handleToggle, handleSelect, handlePrompt, handleRefresh, handleFocusOut, handleClose };
+  return { isOpen, handleToggle, handleSelect, handlePrompt, handleRefresh, handleFocusOut, handleClose, handleSave };
 }
 // 右下のモデル選択と、その下のプロンプト領域。
 const template = `<section class="model-settings ai-accent" aria-label="AI設定"
@@ -32,12 +35,14 @@ const template = `<section class="model-settings ai-accent" aria-label="AI設定
   <div class="model-picker">
     <div v-if="isOpen" class="model-options" aria-label="利用可能なモデル">
       <p v-if="!models.length">モデルは未取得です</p>
-      <button v-for="model in models" :key="model" type="button" class="text-button" @click="handleSelect(model)">{{ model }}</button>
-      <button type="button" class="text-button" :disabled="isBusy" @click="handleRefresh">{{ isBusy ? '取得中…' : 'モデル一覧を取得' }}</button>
+      <button v-for="model in models" :key="model" type="button" class="text-button" :disabled="isLocked" @click="handleSelect(model)">{{ model }}</button>
+      <button type="button" class="text-button" :disabled="isBusy || isLocked" @click="handleRefresh">{{ isBusy ? '取得中…' : 'モデル一覧を取得' }}</button>
     </div>
-    <button type="button" class="text-button model-toggle" :aria-expanded="isOpen" @click="handleToggle">{{ currentModel || 'モデルを選択' }} ▴</button>
+    <button type="button" class="text-button model-toggle" :disabled="isLocked" :aria-expanded="isOpen" @click="handleToggle">{{ currentModel || 'モデルを選択' }} ▴</button>
   </div>
   <label for="system-prompt">システムプロンプト</label>
-  <textarea id="system-prompt" :value="systemPrompt" @input="handlePrompt" rows="2" placeholder="AIへの指示を入力…"></textarea>
+  <textarea id="system-prompt" :value="systemPrompt" :disabled="isLocked" @input="handlePrompt" rows="2" placeholder="AIへの指示を入力…"></textarea>
+<p class="settings-status" :class="{ 'error-message': hasError }" role="status">{{ status }}</p>
+  <button v-if="hasError" type="button" class="text-button" :disabled="isLocked" @click="handleSave">設定の保存を再試行</button>
 </section>`;
 export default { name, props, emits, setup, template };

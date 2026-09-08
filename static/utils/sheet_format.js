@@ -53,8 +53,12 @@ export function parseSheet(value) {
   collectIds(value.links);
   collectIds(value.groups);
   collectIds(value.notes);
+  const pairs = new Set();
   const links = value.links.map(link => {
     if (!ids.has(link.a) || !ids.has(link.b) || link.a === link.b) throw new Error('接続先が不正です。');
+    const pair = JSON.stringify([link.a, link.b].sort());
+    if (pairs.has(pair)) throw new Error('接続が重複しています。');
+    pairs.add(pair);
     return { id: link.id, a: link.a, b: link.b, comment: requireText(link.comment) };
   });
   const assigned = new Set();

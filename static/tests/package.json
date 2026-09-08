@@ -1,0 +1,7 @@
+{
+  "name": "mu-psd12-frontend-tests",
+  "private": true,
+  "type": "module",
+  "scripts": { "test": "node --loader ./loader.mjs ./run.mjs" },
+  "devDependencies": { "vue": "3.5.13", "jsdom": "26.1.0", "feather-icons": "4.29.0" }
+}

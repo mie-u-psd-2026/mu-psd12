@@ -4,7 +4,7 @@ async function request(path, method = 'GET', body) {
   let response;
   try {
     response = await fetch(path, { method, headers: { 'Content-Type': 'application/json' },
-      body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(15000) });
+      body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(path === '/ai' ? 120000 : 15000) });
   } catch {
     throw new Error('サーバーに接続できません。起動状態を確認してください。');
   }
@@ -26,5 +26,9 @@ export function useApiClient() {
     getSheet: id => request(`/sheet/${encodeURIComponent(id)}`),
     saveSheet: (id, body) => request(`/sheet/${encodeURIComponent(id)}`, 'PUT', body),
     getModels: () => request('/models'),
+    getState: () => request('/state'),
+    updateState: partial => request('/state', 'PUT', partial),
+    deleteSheet: id => request(`/sheet/${encodeURIComponent(id)}`, 'DELETE'),
+    requestAi: body => request('/ai', 'POST', body),
   };
 }

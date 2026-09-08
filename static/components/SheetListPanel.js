@@ -5,7 +5,7 @@ const name = 'SheetListPanel';
 // 一覧内容と読み込み状態。
 const props = { sheets: { type: Array, default: () => [] }, isBusy: Boolean, hasError: Boolean };
 // 一覧から選ばれた操作。
-const emits = ['select', 'createNew', 'close', 'retry'];
+const emits = ['select', 'createNew', 'close', 'retry', 'delete'];
 
 // 日付表示とボタンの通知ハンドラを返す。
 function setup(props, { emit }) {
@@ -22,7 +22,9 @@ function setup(props, { emit }) {
   function handleClose() { emit('close'); }
   // 再取得を親へ通知する。
   function handleRetry() { emit('retry'); }
-  return { formatDate, handleSelect, handleCreate, handleClose, handleRetry };
+  // 保存済みシートの削除を要求する。
+  function handleDelete(id) { emit('delete', id); }
+  return { handleDelete, formatDate, handleSelect, handleCreate, handleClose, handleRetry };
 }
 // フォーカス移動でも利用できるシート一覧。
 const template = `
@@ -35,7 +37,7 @@ const template = `
     <ul v-else><li v-for="sheet in sheets" :key="sheet.id">
       <button type="button" class="sheet-list-entry" :disabled="isBusy" @click="handleSelect(sheet.id)">
         <strong>{{ sheet.title }}</strong><time>{{ formatDate(sheet.updated_at) }}</time>
-      </button></li></ul>
+      </button><button type="button" class="icon-button" :aria-label="'シートを削除：' + sheet.title" :disabled="isBusy" @click="handleDelete(sheet.id)"><app-icon icon="trash-2" label="削除"></app-icon></button></li></ul>
     <button type="button" class="text-button" :disabled="isBusy" @click="handleCreate">新規シートを作成</button>
   </section>`;
 export default { name, props, emits, components: { AppIcon }, setup, template };
