@@ -12,15 +12,20 @@
 
 ## フロントエンド担当
 
-- 担当: `static/`, `mocks/`
+- 担当: `static/`, `mocks/`, `tests/frontend/`
 - 上記以外（`app.py` 等）は変更しない
 - `frontend` ブランチ上で作業する
 
 ## バックエンド担当
 
-- 担当: `app.py`, `requirements.txt`, `services/`（新設時）
+- 担当: `app.py`, `requirements.txt`, `services/`（新設時）, `tests/backend/`
 - `static/`, `mocks/` は変更しない
 - `backend` ブランチ上で作業する
+
+## テスト
+
+- テストコード・テスト結果は `tests/` にまとめる（`tests/frontend`, `tests/backend`, `tests/e2e`, `tests/result`）
+- `tests/e2e/`, `tests/result/` はPM管理。テスト仕様は [test-spec.md](test-spec.md)、テスト結果は `tests/result/` を参照
 
 ## ブランチ運用
 

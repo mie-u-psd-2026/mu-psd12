@@ -18,7 +18,7 @@ export async function resolve(specifier, context, nextResolve) {
 
 // ビルドなしのブラウザ用.jsファイルを、テスト時だけESモジュールとして読む。
 export async function load(url, context, nextLoad) {
-  if (url.startsWith(new URL('../', import.meta.url).href) && url.endsWith('.js') && !url.includes('/node_modules/')) {
+  if (url.startsWith(new URL('../../static/', import.meta.url).href) && url.endsWith('.js') && !url.includes('/node_modules/')) {
     const { readFile } = await import('node:fs/promises');
     return { format: 'module', source: await readFile(new URL(url), 'utf8'), shortCircuit: true };
   }
