@@ -51,6 +51,7 @@ ollama pull qwen2.5-coder:0.5b
   以下のコマンドで仮想環境をアクティベートします。  
 
   ```
+  Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
   .\.venv\Scripts\activate
   ```
 
