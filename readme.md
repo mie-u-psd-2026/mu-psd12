@@ -22,16 +22,16 @@ AIのサポート機能がついたブレインストーミングのシート管
 ```
 winget install --id Microsoft.VisualStudioCode -e --source winget --accept-package-agreements --accept-source-agreements
 winget install --id Python.Python.3.13 -e --source winget --accept-package-agreements --accept-source-agreements
-winget install --id SST.opencode -e --source winget --accept-package-agreements --accept-source-agreements
 winget install --id Ollama.Ollama -e --source winget --accept-package-agreements --accept-source-agreements
-start /b ollama serve > NUL 2>&1
-timeout /t 3 /nobreak > NUL
+```
+
+ollama で任意のモデルを入手してください。  
+以下は `qwen2.5-coder:0.5b` モデルを入手する例です。  
+```
+
 ollama pull qwen2.5-coder:0.5b
 ```
 
-- vscodeを起動し、アクティビティバーの拡張機能から、以下のプラグインをインストールしてください。
-  - Python
-  - Vue.js Extension Pack
 
 # 環境セットアップ
 
@@ -56,7 +56,7 @@ ollama pull qwen2.5-coder:0.5b
   ```
 
   > 成功すると、ターミナルに `(.venv)` と表示されます。  
-  > 以降、Python や pip などを実行する際は仮想環境内で実行してください。  
+  > 以降、Python や pip などを実行する際は**仮想環境内で実行**してください。  
 
   仮想環境を終了する場合は、以下のコマンドを使うか、ターミナルを終了します。  
 
@@ -82,56 +82,42 @@ ollama pull qwen2.5-coder:0.5b
   copy .env.example .env
   ```
 
-  > `.env` は `.gitignore` によってGit管理から外されています。必要に応じて値を書き換えてください。
+  > `.env` は必要に応じて値を書き換えてください。
 
 # 実行方法
 
-- 以下のコマンドでサーバを起動します。
+- ollama サーバの起動
+
+  > アプリ利用時に自動で ollama が起動している場合もあります。必要に応じて手動で起動してください。  
+
+  以下のコマンドで ollama のサーバを起動します。
+
+  コマンドプロンプトでバックグラウンドプロセスとして起動する場合:  
+  
+  ```
+  start /b ollama serve > NUL 2>&1
+  ```
+
+  PowerShell 上で起動する場合:  
+
+  ```
+  ollama serve
+  ```
+
+- アプリケーションサーバの起動
+  
+  以下のコマンドでサーバを起動します。
 
   ```
   python app.py
   ```
 
-- ブラウザで以下のURLにアクセスしてみてください。
+- アプリの起動
+
+  ブラウザで以下のURLにアクセスしてください。
 
   ```
   http://localhost:5000
   ```
 
-# 開発の参考資料
-
-## ローカルの Ollama を使う場合
-
-- VsCode上でターミナルを開いて、以下を入力します。
-```
-ollama launch opencode --model=qwen2.5-coder:0.5b
-```
-
 > 本アプリは初期リリースではローカルモデルのみに対応します（design-document.md 2章参照）。クラウドモデルの利用は将来拡張です。
-
-# AIを用いたコード修正
-
-- opencodeに修正を依頼してみてください。（例：ノードの色を変更する機能を追加して）
-- フロントエンド/バックエンドの担当分担・変更範囲は [AGENTS.md](AGENTS.md) を参照してください。
-
-# 参考リンク
-
-- [Flask](https://flask.palletsprojects.com/en/stable/)
-
-  - Python で書かれた Webアプリケーションサーバ
-
-- [Vue.js](https://vuejs.org/)
-
-  - JavaScript製のWebフロントエンド フレームワーク
-
-- [Vue.js Tutorial](https://ja.vuejs.org/tutorial/)
-
-  - Vue.jsの入門用チュートリアル
-
-- [OpenAI API](https://github.com/openai/openai-python)
-
-  - Pythonから、OpenAI APIを呼び出すライブラリ
-
-- [Feather Icons](https://github.com/feathericons/feather)
-
-  - UIのアイコン表示に用いるアイコンライブラリ
