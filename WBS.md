@@ -44,33 +44,33 @@
 
 #### 共通UI・レイアウト作成 (9/3 - 9/4 FE)
 
-- [ ] `static/index.html`: CDN読み込み・マウント処理
-- [ ] 6章のカラーセット・レイアウトCSS実装
-- [ ] `AppRoot.js`: レイアウト組み立て
-- [ ] `ModeHud.js`: モード表示
-- [ ] `Toolbar.js`: 新規/読込/保存/エクスポート/インポート/Undo/Redo
-- [ ] `SheetTitle.js`: シートタイトルのインライン編集
-- [ ] `RadialWheel.js`: 汎用ラジアルメニュー
+- [x] `static/index.html`: CDN読み込み・マウント処理
+- [x] 6章のカラーセット・レイアウトCSS実装
+- [x] `AppRoot.js`: レイアウト組み立て
+- [x] `ModeHud.js`: モード表示
+- [x] `Toolbar.js`: 新規/読込/保存/エクスポート/インポート/Undo/Redo
+- [x] `SheetTitle.js`: シートタイトルのインライン編集
+- [x] `RadialWheel.js`: 汎用ラジアルメニュー
 
 #### 各画面実装 (9/4 - 9/7 FE)
 
-- [ ] `useSheetState.js`: シート状態・CRUD
-- [ ] `usePhysicsSimulation.js`: 物理シミュレーション
-- [ ] `useUndoRedo.js`: Undo/Redo履歴
-- [ ] `useWheel.js`: ホイールの開閉・選択状態
-- [ ] `SheetCanvas.js`: パン・ズーム、モード別クリック操作
-- [ ] `SheetNode.js` / `SheetEdge.js` / `SheetGroup.js`: 描画
-- [ ] `EditPanel.js`: join/groupの簡易インライン編集パネル
-- [ ] `NotesPanel.js`: ノート一覧
-- [ ] `MutterInput.js`: ひとりごとメモ
-- [ ] `AiProposalPanel.js`: AI提案のコミット/却下
-- [ ] `ModelSelect.js`: モデル選択・システムプロンプト
-- [ ] `SheetListPanel.js`: シート一覧・新規作成
+- [x] `useSheetState.js`: シート状態・CRUD
+- [x] `usePhysicsSimulation.js`: 物理シミュレーション
+- [x] `useUndoRedo.js`: Undo/Redo履歴
+- [x] `useWheel.js`: ホイールの開閉・選択状態
+- [x] `SheetCanvas.js`: パン・ズーム、モード別クリック操作
+- [x] `SheetNode.js` / `SheetEdge.js` / `SheetGroup.js`: 描画
+- [x] `EditPanel.js`: join/groupの簡易インライン編集パネル
+- [x] `NotesPanel.js`: ノート一覧
+- [x] `MutterInput.js`: ひとりごとメモ
+- [x] `AiProposalPanel.js`: AI提案のコミット/却下
+- [x] `ModelSelect.js`: モデル選択・システムプロンプト
+- [x] `SheetListPanel.js`: シート一覧・新規作成
 
 #### API連携実装 (9/7 - 9/8 PM/FE)
 
-- [ ] `useApiClient.js`: 各エンドポイント呼び出し実装
-- [ ] AI呼び出し前の自動保存（`PUT /sheet/{id}`）
+- [x] `useApiClient.js`: 各エンドポイント呼び出し実装
+- [x] AI呼び出し前の自動保存（`PUT /sheet/{id}`）
 
 ### バックエンド (9/3 - 9/8 PM/BE)
 
@@ -91,15 +91,38 @@
 
 ### 機能実装完了・コードフリーズ (9/8 PM/ALL)
 
+- [x] フロントエンド・バックエンド成果物マージ
+
 ## テスト・QA (9/4 - 9/10)
 
 ### テストケース作成 (9/4 - 9/5 FE)
 
+- [x] 自動テストケース
+  - [x] 単体テスト
+    - [x] フロントエンドテスト
+    - [x] バックエンドテスト
+  - [x] E2Eテスト
+- [x] 手動テストケース
+  - [x] シナリオテスト
+
 ### 結合テスト (9/8 - 9/9 PM/ALL)
+
+- [x] 自動テスト実行
 
 ### システム・シナリオテスト (9/9 - 9/10 PM/ALL)
 
-### 不具合修正・リグレッションテスト (9/9 - 9/10 PM/ALL)
+- [ ] シナリオテスト実行
+
+### 不具合修正・リグレッションテスト (9/9 - 9/10 PM/BE)
+
+- APIリクエストボディの統一（仕様書に合わせる）
+  - [ ] `PUT /sheet/{id}`: リクエストボディのフラット化（`body`ネスト廃止）
+  - [ ] `GET /sheet/{id}`: レスポンスのフラット化（`body`ネスト廃止）
+  - [ ] `GET /sheets`: レスポンスのラップ解除（bare配列化）
+  - [ ] `GET /state`: レスポンスのラップ解除（`state`キー廃止）
+  - [ ] `PUT /state`: リクエストボディのラップ解除（`state`キー廃止）
+  - [ ] `GET /models`: レスポンスを`{data:[{id}]}`形式に変更
+  - [ ] `POST /ai`: `target_node_id`の空文字列判定バグ修正（`is None`判定に）
 
 ### コードフリーズ (9/10 ALL)
 
