@@ -185,6 +185,7 @@ class ApiErrorFormatTest(unittest.TestCase):
         self.assertEqual(resp.get_json()['error']['code'], 'not_found')
 
     def test_create_and_get_sheet_api(self):
+        # design-document.md 8.2: GET /sheet/{id}はnodes/links/groups/notesをbodyでネストせずフラット展開する
         app = self._patch_storage()
         client = app.test_client()
         create = client.post('/sheet', json={'title': 'APIシート'})
@@ -192,7 +193,24 @@ class ApiErrorFormatTest(unittest.TestCase):
         sheet_id = create.get_json()['id']
         get = client.get(f'/sheet/{sheet_id}')
         self.assertEqual(get.status_code, 200)
-        self.assertEqual(get.get_json()['title'], 'APIシート')
+        data = get.get_json()
+        self.assertEqual(data['title'], 'APIシート')
+        for key in ('nodes', 'links', 'groups', 'notes'):
+            self.assertIn(key, data)
+        self.assertNotIn('body', data)
+
+    def test_update_sheet_api_flat_body(self):
+        # design-document.md 8.2: PUT /sheet/{id}のリクエストボディはbodyでネストせずフラットに送る
+        app = self._patch_storage()
+        client = app.test_client()
+        sheet_id = client.post('/sheet', json={'title': 'A'}).get_json()['id']
+        flat_body = {'title': 'B', 'nodes': [{'id': 'n0', 'kind': 'theme', 'text': '変更後', 'parent': None}],
+                     'links': [], 'groups': [], 'notes': []}
+        resp = client.put(f'/sheet/{sheet_id}', json=flat_body)
+        self.assertEqual(resp.status_code, 200)
+        get = client.get(f'/sheet/{sheet_id}').get_json()
+        self.assertEqual(get['title'], 'B')
+        self.assertEqual(get['nodes'][0]['text'], '変更後')
 
     def test_update_sheet_api_validation(self):
         app = self._patch_storage()
@@ -202,12 +220,42 @@ class ApiErrorFormatTest(unittest.TestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.get_json()['error']['code'], 'validation')
 
-    def test_state_api(self):
+    def test_get_sheets_returns_bare_array(self):
+        # design-document.md 8.2: GET /sheetsは{sheets:[...]}でラップせずbare配列で返す
         app = self._patch_storage()
         client = app.test_client()
-        self.assertEqual(client.put('/state', json={'state': {'key': 'v'}}).status_code, 200)
+        client.post('/sheet', json={'title': 'A'})
+        data = client.get('/sheets').get_json()
+        self.assertIsInstance(data, list)
+        self.assertEqual(data[0]['title'], 'A')
+
+    def test_state_api(self):
+        # design-document.md 8.2: GET/PUT /stateは{state:{...}}でラップせずキーバリューを直接扱う
+        app = self._patch_storage()
+        client = app.test_client()
+        self.assertEqual(client.put('/state', json={'key': 'v'}).status_code, 200)
         resp = client.get('/state')
-        self.assertEqual(resp.get_json()['state']['key'], '"v"')
+        self.assertEqual(resp.get_json()['key'], '"v"')
+
+    def test_get_models_openai_compatible_format(self):
+        # design-document.md 8.2: {"data": [{"id": "..."}]}のOpenAI互換形式で透過する
+        app = self._patch_storage()
+        with patch.object(ai_service, 'list_models', return_value=['qwen3.5:0.8b']):
+            client = app.test_client()
+            resp = client.get('/models')
+        self.assertEqual(resp.get_json(), {'data': [{'id': 'qwen3.5:0.8b'}]})
+
+    def test_ai_empty_target_node_id_means_whole_sheet(self):
+        # design-document.md 8.2: target_node_id=""はシート全体対象として有効。必須チェックで弾いてはならない
+        app = self._patch_storage()
+        client = app.test_client()
+        sheet_id = client.post('/sheet', json={'title': 'A'}).get_json()['id']
+        proposal = {'title': 'AI提案', 'ops': [], 'ghosts': [], 'removes': [],
+                    'links': [], 'group': None, 'note': None, 'merge': False}
+        with patch.object(ai_service, 'request_transaction', return_value=proposal):
+            resp = client.post('/ai', json={'model_name': 'local-model', 'mode': 'note',
+                                             'sheet_id': sheet_id, 'target_node_id': ''})
+        self.assertEqual(resp.status_code, 200)
 
     def test_delete_missing_sheet_returns_not_found(self):
         app = self._patch_storage()

@@ -74,23 +74,24 @@ const childId = vm.sheetState.nodes[1].id;
 await click(document.querySelectorAll('.node-button')[1]);
 const grandchildId = vm.sheetState.nodes[2].id;
 await mode('ノード削除');
+// design-document.md 4.1: 長押し600msで削除、子孫はサブツリーごと削除する（付け替えではない）。
 let childButton = document.querySelectorAll('.node-button')[1];
 childButton.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 50, clientY: 50 }));
 await new Promise(resolve => setTimeout(resolve, 50));
 window.dispatchEvent(new MouseEvent('pointerup', { button: 0 }));
-await new Promise(resolve => setTimeout(resolve, 810));
+await new Promise(resolve => setTimeout(resolve, 610));
 assert.equal(vm.sheetState.nodes.length, 3, '短いクリックは削除しない');
 childButton.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 50, clientY: 50 }));
-await new Promise(resolve => setTimeout(resolve, 820));
+await new Promise(resolve => setTimeout(resolve, 620));
 await settle();
-assert.equal(vm.sheetState.nodes.length, 2);
-assert.equal(vm.sheetState.nodes.find(node => node.id === grandchildId).parent, 'n0');
+assert.equal(vm.sheetState.nodes.length, 1, '子孫ノードもサブツリーごと削除される');
+assert(!vm.sheetState.nodes.some(node => node.id === grandchildId), '孫ノードも削除されている');
 await click(button('元に戻す'));
-assert.equal(vm.sheetState.nodes.find(node => node.id === grandchildId).parent, childId);
+assert.equal(vm.sheetState.nodes.length, 3, 'Undoでサブツリーごと復元される');
 vm.deleteNode('n0'); await settle();
 assert.equal(vm.sheetState.nodes.length, 3);
 assert(vm.message.includes('テーマ'));
-results.push('800ms長押し・取消、子の付替え、テーマ保護、Undo');
+results.push('600ms長押し・取消、サブツリー削除、テーマ保護、Undo');
 
 await mode('ノード接続');
 await click(document.querySelectorAll('.node-button')[0]);
@@ -504,5 +505,61 @@ results.push('前回シートの自動復元と履歴リセット');
   assert.equal(session.hasError.value, true, '壊れたJSONのインポートはエラーになる');
 }
 results.push('API応答不正・ネットワーク障害・不正インポートのエラーハンドリング');
+
+// design-document.md 6.4: モードに応じてカーソルを変える（view=grab、他=crosshair）。未実装のため現状は失敗する想定。
+{
+  await mode('ビュー');
+  const canvas = document.querySelector('.sheet-canvas');
+  assert.equal(window.getComputedStyle(canvas).cursor, 'grab', 'viewモードはgrabカーソル');
+  await mode('ノード追加');
+  assert.equal(window.getComputedStyle(canvas).cursor, 'crosshair', 'view以外は十字カーソル');
+  await mode('ビュー');
+  results.push('モード別カーソル表示（新仕様）');
+}
+
+// design-document.md 6.2: 画面全体にビネット効果を敷く。未実装のため現状は失敗する想定。
+// 実装時のクラス名は仮定（.vignette）。実際の実装に合わせて調整すること。
+{
+  assert(document.querySelector('.vignette'), 'ビネット効果の要素が存在する');
+  results.push('ビネット効果（新仕様）');
+}
+
+// design-document.md 4.1: マウスホイール操作でもモードホイールを表示する。未実装のため現状は失敗する想定。
+{
+  await mode('ビュー');
+  document.querySelector('.sheet-canvas').dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 100 }));
+  await settle();
+  assert(document.querySelector('.radial-wheel'), 'マウスホイール操作でモードホイールが表示される');
+  results.push('マウスホイールでのモードホイール表示（新仕様）');
+}
+
+// design-document.md 4.1: 右クリック長押し→モードホイール表示はほぼ即時（体感できない程度）。
+// 現状useWheel.jsのHOLD_DELAYは350msのため、60ms程度の待機では失敗する想定。
+{
+  document.querySelector('.sheet-canvas').dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 2, clientX: 300, clientY: 300 }));
+  await new Promise(resolve => setTimeout(resolve, 60));
+  assert(document.querySelector('.radial-wheel'), '右クリック長押しから短時間でモードホイールが表示される');
+  window.dispatchEvent(new MouseEvent('pointerup', { button: 2 }));
+  await settle();
+  results.push('右クリック長押しの即時表示（新仕様）');
+}
+
+// design-document.md 6.4: 同グループのノードはより引き合い、異なるグループ（無所属含む）はより反発する。
+// stepPhysicsに groups 引数を追加する想定（未実装のため現状は無視され差が出ない）。
+{
+  const makeBodies = () => ([
+    { id: 'a', isRoot: false, x: -100, y: 0, vx: 0, vy: 0, width: 192, height: 56 },
+    { id: 'b', isRoot: false, x: 100, y: 0, vx: 0, vy: 0, width: 192, height: 56 },
+  ]);
+  const sameGroupBodies = makeBodies();
+  const groups = [{ members: ['a', 'b'] }];
+  for (let i = 0; i < 60; i++) stepPhysics(sameGroupBodies, [], groups);
+  const diffGroupBodies = makeBodies();
+  for (let i = 0; i < 60; i++) stepPhysics(diffGroupBodies, [], []);
+  const sameDistance = Math.abs(sameGroupBodies[1].x - sameGroupBodies[0].x);
+  const diffDistance = Math.abs(diffGroupBodies[1].x - diffGroupBodies[0].x);
+  assert(sameDistance < diffDistance, '同グループのノードは無所属時より近づく');
+  results.push('グループ内引力・グループ間斥力（新仕様）');
+}
 
 console.log(results.map(result => 'PASS: ' + result).join('\n'));
