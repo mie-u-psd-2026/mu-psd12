@@ -26,7 +26,7 @@
 |----|------|----------|
 | 1 | `SheetFormatServiceTest` | シートのLLM向けシリアライズ・区切り文字エスケープ・LLM応答のパース・エクスポート/インポート形式の相互変換が仕様通り動作する |
 | 2 | `DatabaseServiceTest` | シートのCRUD・一覧取得・`state`のマージ更新が仕様通り動作する |
-| 3 | `ApiErrorFormatTest` | 共通エラー形式（`validation`/`not_found`/`llm_unavailable`）、シート作成・取得・更新APIの応答が仕様通り |
+| 3 | `ApiErrorFormatTest` | 共通エラー形式（`validation`/`not_found`/`llm_unavailable`/`llm_timeout`/`internal_error`）、シート作成・取得・更新・削除、`POST /ai`成功/異常系の応答が仕様通り |
 
 ### 3.2 フロントエンド（[tests/frontend/run.mjs](tests/frontend/run.mjs)）
 
@@ -50,6 +50,7 @@
 | 14 | 保存・読込・最後のシートID更新・確認付きシート削除 | 仕様通り動作する |
 | 15 | 保存成功でUndo/Redoリセット、保存失敗で保持、AI承認を新規履歴化 | 仕様通り動作する |
 | 16 | 前回シートの自動復元と履歴リセット | 仕様通り動作する |
+| 17 | API応答不正・ネットワーク障害・不正インポートのエラーハンドリング（`GET /models`/`GET /state`/`GET /sheets`/`GET /sheet`の不正形式、5MB超過・壊れたJSONのインポート） | 仕様通り動作する |
 
 ### 3.3 E2E（[tests/e2e/run.mjs](tests/e2e/run.mjs)、Playwright・AI非依存の定型操作）
 

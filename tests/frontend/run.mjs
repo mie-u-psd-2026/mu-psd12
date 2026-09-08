@@ -454,4 +454,55 @@ resumedApp.unmount();
 assert.equal(frames.size, 0);
 assert.deepEqual(errors, []);
 results.push('前回シートの自動復元と履歴リセット');
+
+// バックエンドが契約通りに応答しない場合のエラーハンドリング。
+{
+  const settings = useAppSettings();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (path, options) => (path === '/models')
+    ? new Response(JSON.stringify({ foo: 'bar' })) : originalFetch(path, options);
+  await settings.refreshModels();
+  assert.equal(settings.hasError.value, true);
+  assert(settings.status.value.includes('モデル一覧'), 'GET /models不正形式のエラー文言');
+  globalThis.fetch = originalFetch;
+}
+{
+  const settings = useAppSettings();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async () => { throw new TypeError('network down'); };
+  await settings.restore();
+  assert.equal(settings.hasError.value, true);
+  assert(settings.status.value.includes('設定を復元できませんでした'), 'GET /stateネットワーク障害のエラー文言');
+  globalThis.fetch = originalFetch;
+}
+{
+  const session = useSheetSession();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (path, options) => (path === '/sheets')
+    ? new Response(JSON.stringify({ sheets: [] })) : originalFetch(path, options);
+  await session.openList();
+  assert.equal(session.hasError.value, true);
+  assert(session.message.value.includes('シート一覧'), 'GET /sheets不正形式のエラー文言');
+  globalThis.fetch = originalFetch;
+}
+{
+  const session = useSheetSession();
+  stored['bad-title'] = { ...base };
+  await session.loadSheet('bad-title');
+  assert.equal(session.hasError.value, true);
+  assert(session.message.value.includes('タイトル'), 'GET /sheetタイトル不正のエラー文言');
+}
+{
+  const session = useSheetSession();
+  await session.importSheet({ size: 6 * 1024 * 1024, text: async () => '{}' });
+  assert.equal(session.hasError.value, true);
+  assert(session.message.value.includes('5MB'), 'インポート最大サイズ超過のエラー文言');
+}
+{
+  const session = useSheetSession();
+  await session.importSheet({ size: 10, text: async () => '不正なJSON' });
+  assert.equal(session.hasError.value, true, '壊れたJSONのインポートはエラーになる');
+}
+results.push('API応答不正・ネットワーク障害・不正インポートのエラーハンドリング');
+
 console.log(results.map(result => 'PASS: ' + result).join('\n'));

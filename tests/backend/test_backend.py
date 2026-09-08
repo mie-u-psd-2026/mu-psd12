@@ -209,6 +209,53 @@ class ApiErrorFormatTest(unittest.TestCase):
         resp = client.get('/state')
         self.assertEqual(resp.get_json()['state']['key'], '"v"')
 
+    def test_delete_missing_sheet_returns_not_found(self):
+        app = self._patch_storage()
+        client = app.test_client()
+        resp = client.delete('/sheet/missing')
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.get_json()['error']['code'], 'not_found')
+
+    def test_ai_success(self):
+        app = self._patch_storage()
+        client = app.test_client()
+        sheet_id = client.post('/sheet', json={'title': 'A'}).get_json()['id']
+        proposal = {'title': 'AI提案', 'ops': [], 'ghosts': [], 'removes': [],
+                    'links': [], 'group': None, 'note': None, 'merge': False}
+        with patch.object(ai_service, 'request_transaction', return_value=proposal):
+            resp = client.post('/ai', json={'model_name': 'local-model', 'mode': 'expand',
+                                             'sheet_id': sheet_id, 'target_node_id': 'n0'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.get_json()['title'], 'AI提案')
+
+    def test_ai_llm_timeout(self):
+        app = self._patch_storage()
+        client = app.test_client()
+        sheet_id = client.post('/sheet', json={'title': 'A'}).get_json()['id']
+        with patch.object(ai_service, 'request_transaction',
+                          side_effect=ai_service.LLMTimeoutError('timeout')):
+            resp = client.post('/ai', json={'model_name': 'local-model', 'mode': 'expand',
+                                             'sheet_id': sheet_id, 'target_node_id': 'n0'})
+        self.assertEqual(resp.status_code, 504)
+        self.assertEqual(resp.get_json()['error']['code'], 'llm_timeout')
+
+    def test_ai_missing_fields_returns_validation(self):
+        app = self._patch_storage()
+        client = app.test_client()
+        resp = client.post('/ai', json={'model_name': 'local-model'})
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.get_json()['error']['code'], 'validation')
+
+    def test_internal_error_format(self):
+        app = self._patch_storage()
+        client = app.test_client()
+        sheet_id = client.post('/sheet', json={'title': 'A'}).get_json()['id']
+        with patch.object(sheet_format_service, 'serialize_for_llm', side_effect=RuntimeError('boom')):
+            resp = client.post('/ai', json={'model_name': 'local-model', 'mode': 'expand',
+                                             'sheet_id': sheet_id, 'target_node_id': 'n0'})
+        self.assertEqual(resp.status_code, 500)
+        self.assertEqual(resp.get_json()['error']['code'], 'internal_error')
+
 
 if __name__ == '__main__':
     unittest.main()
