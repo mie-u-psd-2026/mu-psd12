@@ -1,17 +1,29 @@
-// ============================================================
-// プレースホルダーファイル。
-// 実装時には、このコメントを含む全てのプレースホルダーコメントを削除すること。
-// ============================================================
-// シート本体（nodes/links/groups/notes）の状態とCRUD操作（8.1.1, 4.1）。
-// 複数コンポーネントを跨いで共有するため、Composition APIで提供する（7.4）。
+// シート本体を保持し、ノードの追加とテキスト更新を提供する。
+import { reactive } from 'vue';
+import { createEmptySheet } from '../utils/sheet_format.js';
 
-// import { reactive } from 'vue';
-
-// TODO: 8.1.1のスキーマに従った初期状態（nodes/links/groups/notes）を保持する
+// 初期シートと、木構造を維持する編集関数を返す。
 export function useSheetState() {
-  // TODO: addNode / removeNode / updateNodeText（4.1 add/remove/edit）
-  // TODO: addLink / updateLink / removeLink（4.1 join）
-  // TODO: addToGroup / createGroup / removeFromGroup / updateGroup（4.1 group）
-  // TODO: addNote（4.6 / 4.7）
-  return {};
+  const sheetState = reactive(createEmptySheet());
+
+  // 親IDを受け取り、存在する親に子ノードを追加してそのIDを返す。
+  function addNode(parentId) {
+    if (!sheetState.nodes.some(node => node.id === parentId)) return null;
+
+    const id = crypto.randomUUID();
+    sheetState.nodes.push({ id, kind: 'idea', text: '新しいアイデア', parent: parentId });
+    return id;
+  }
+
+  // ノードIDと文字列を受け取り、空白のみの入力を除いて更新する。
+  function updateNodeText(id, text) {
+    if (typeof text !== 'string' || !text.trim()) return;
+
+    const node = sheetState.nodes.find(node => node.id === id);
+    if (!node) return;
+
+    node.text = text.trim();
+  }
+
+  return { sheetState, addNode, updateNodeText };
 }

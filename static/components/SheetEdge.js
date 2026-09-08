@@ -1,24 +1,23 @@
-// ============================================================
-// プレースホルダーファイル。
-// 実装時には、このコメントを含む全てのプレースホルダーコメントを削除すること。
-// ============================================================
-// 直接エッジ（実線）・間接エッジ（破線）の描画（4.1, 6.1）。
-// joinモード中、間接エッジのクリックで EditPanel を開く（コメント編集・削除）。
-
+// 接続の線と、編集用の広いクリック領域を描画する。
+// コンポーネントの識別名。
 const name = 'SheetEdge';
-
-const props = {
-  // TODO: from, to, type（'direct' | 'indirect' | 'ai'）, link（間接エッジのみ: id, comment）
-};
-
-const emits = [
-  // TODO: 'edit-requested'（joinモード中のクリック時）
-];
-
+// 接続の座標、種別、編集状態。
+const props = { from: { type: Object, required: true }, to: { type: Object, required: true },
+  type: { type: String, default: 'direct' }, link: Object, canEdit: Boolean, isChanged: Boolean, isRemoved: Boolean };
+// 編集対象とクリック位置の通知。
+const emits = ['editRequested'];
+// 編集ハンドラを返す。
 function setup(props, { emit }) {
-  return {};
+  // 接続が編集可能な場合、対象とクリック位置を親へ通知する。
+  function handleEdit(event) { if (props.canEdit) emit('editRequested', props.link, event); }
+  return { handleEdit };
 }
-
-const template = ``;
-
+// 線本体と透明なクリック領域を重ねる。
+const template = `<g v-if="from && to">
+  <line :x1="from.x" :y1="from.y" :x2="to.x" :y2="to.y" class="sheet-edge"
+    :class="{ 'is-indirect': type === 'indirect', 'ai-edge': isChanged || isRemoved, 'is-removed': isRemoved }" />
+  <line v-if="canEdit" :x1="from.x" :y1="from.y" :x2="to.x" :y2="to.y" class="edge-hit"
+    role="button" tabindex="0" :aria-label="'接続を編集：' + (link.comment || 'コメントなし')"
+    @click.stop="handleEdit" @keydown.enter.prevent="handleEdit"><title>{{ link.comment || '接続を編集' }}</title></line>
+</g>`;
 export default { name, props, emits, setup, template };

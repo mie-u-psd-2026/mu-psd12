@@ -1,30 +1,32 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AIサポート付きブレストアプリ</title>
-<!--
-  ============================================================
-  プレースホルダーファイル。
-  実装時には、このコメントを含む全てのプレースホルダーコメントを削除すること。
-  ============================================================
-  - Vue.js / Feather Icons はCDNから特定バージョンを固定して読み込む（5章）
-  - レイアウト・カラーセットは6章に従う。mocks/index.html を実装の参考にしてよい
--->
-<!-- <script type="module" src="https://unpkg.com/vue@X.X.X/dist/vue.esm-browser.js"></script> -->
-<!-- <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/X.X.X/feather.min.js"></script> -->
-<!-- <style> ... 6章のカラーセット・レイアウトをここに定義 ... </style> -->
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AIサポート付きブレストアプリ</title>
+  <script type="importmap">
+    {
+      "imports": {
+        "vue": "https://unpkg.com/vue@3.5.13/dist/vue.esm-browser.js"
+      }
+    }
+  </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/feather-icons/4.29.0/feather.min.js"></script>
+  <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <div id="app">
-    <!-- TODO: AppRoot コンポーネントをマウントする -->
-  </div>
-
+  <div id="app"><p class="boot-message" role="status">画面を読み込んでいます…</p></div>
+  <noscript>このアプリを使用するにはJavaScriptを有効にしてください。</noscript>
   <script type="module">
-    // import { createApp } from 'vue';
-    // import AppRoot from '/static/components/AppRoot.js';
-    // createApp(AppRoot).mount('#app');
+    try {
+      const [{ createApp }, { default: AppRoot }] = await Promise.all([
+        import('vue'), import('/static/components/AppRoot.js'),
+      ]);
+      createApp(AppRoot).mount('#app');
+    } catch (error) {
+      document.querySelector('#app').textContent = '画面を読み込めませんでした。サーバー経由で開いていることと、インターネット接続を確認して再読み込みしてください。';
+      console.error(error);
+    }
   </script>
 </body>
 </html>
