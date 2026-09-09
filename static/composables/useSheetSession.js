@@ -219,7 +219,8 @@ export function useSheetSession() {
   async function requestAi(request) {
     if (!request.model_name) { notify('AIモデルを選択してください。', true); return false; }
     return run(async () => {
-      if (request.target_node_id && !sheetState.nodes.some(node => node.id === request.target_node_id)) {
+      if (typeof request.target_node_id !== 'string') throw new Error('AIの対象ノードIDが必要です。全体を対象にする場合は空文字列を指定してください。');
+      if (request.target_node_id !== '' && !sheetState.nodes.some(node => node.id === request.target_node_id)) {
         throw new Error('AIの対象ノードがありません。');
       }
       await persist();
@@ -273,7 +274,7 @@ export function useSheetSession() {
     return requestSwitch('シートを読み込む', () => run(async () => {
       const data = await api.getSheet(id);
       const body = parseSheet(data);
-      const metadata = data.metadata || data;
+      const metadata = data;
       if (typeof metadata.title !== 'string') throw new Error('シートタイトルが不正です。');
       // GET /sheet はバックエンド側で最後に開いたシートを更新する。
       replaceSheet(body, metadata, id);

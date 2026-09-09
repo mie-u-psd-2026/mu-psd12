@@ -35,12 +35,12 @@ def get_models():
         models = ai_service.list_models()
     except ai_service.LLMUnavailableError as e:
         return error_response('llm_unavailable', str(e))
-    return jsonify({'models': models})
+    return jsonify({'data': [{'id': model} for model in models]})
 
 
 @app.route('/sheets', methods=['GET'])
 def get_sheets():
-    return jsonify({'sheets': database_service.list_sheets()})
+    return jsonify(database_service.list_sheets())
 
 
 @app.route('/sheet', methods=['POST'])
@@ -57,16 +57,21 @@ def get_sheet(sheet_id):
     if sheet is None:
         return error_response('not_found', '指定したシートが存在しません')
     database_service.update_state({'last_opened_sheet_id': sheet_id})
-    return jsonify({'id': sheet['id'], 'title': sheet['title'], 'body': sheet['body']})
+    return jsonify({**{key: value for key, value in sheet.items() if key != 'body'}, **sheet['body']})
 
 
 @app.route('/sheet/<sheet_id>', methods=['PUT'])
 def update_sheet(sheet_id):
-    payload = request.get_json(silent=True) or {}
-    title = payload.get('title', '無題')
-    body = payload.get('body')
-    if body is None:
-        return error_response('validation', 'bodyが必要です')
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return error_response('validation', 'JSONオブジェクトが必要です')
+    bodyKeys = ('nodes', 'links', 'groups', 'notes')
+    if not isinstance(payload.get('title'), str):
+        return error_response('validation', 'title文字列が必要です')
+    if any(not isinstance(payload.get(key), list) for key in bodyKeys):
+        return error_response('validation', 'nodes, links, groups, notes配列が必要です')
+    title = payload['title']
+    body = {key: payload[key] for key in bodyKeys}
     updated = database_service.update_sheet(sheet_id, title, body)
     if not updated:
         return error_response('not_found', '指定したシートが存在しません')
@@ -90,7 +95,7 @@ def request_ai():
     target_node_id = payload.get('target_node_id')
     system_prompt = payload.get('system_prompt', '')
 
-    if not model_name or not mode or not sheet_id or not target_node_id:
+    if not model_name or not mode or not sheet_id or target_node_id is None:
         return error_response('validation', 'model_name, mode, sheet_id, target_node_idが必要です')
 
     sheet = database_service.get_sheet(sheet_id)
@@ -116,16 +121,15 @@ def request_ai():
 
 @app.route('/state', methods=['GET'])
 def get_state():
-    return jsonify({'state': database_service.get_state()})
+    return jsonify(database_service.get_state())
 
 
 @app.route('/state', methods=['PUT'])
 def update_state():
-    payload = request.get_json(silent=True) or {}
-    partial = payload.get('state')
-    if partial is None or not isinstance(partial, dict):
-        return error_response('validation', 'stateオブジェクトが必要です')
-    database_service.update_state(partial)
+    payload = request.get_json(silent=True)
+    if not isinstance(payload, dict):
+        return error_response('validation', 'JSONオブジェクトが必要です')
+    database_service.update_state(payload)
     return jsonify({'ok': True})
 
 

@@ -1,14 +1,14 @@
 # フロントエンドのAPI接続契約
 
-`app.py` は現時点では雛形のため、以下の形式を模擬応答で検証しています。バックエンドとの結合時にはこの形式を確認してください。
+仕様書8.2に従い、以下の形式をフロント側の接続契約とします。模擬応答による検証と実バックエンドとの結合確認は別です。バックエンドが旧形式の場合、バックエンド側の対応が必要です。
 
 - `POST /sheet` 入力 `{title}`、応答 `{id}`。
-- `PUT /sheet/{id}` 入力 `{title,nodes,links,groups,notes}`、応答は空または `{updated_at}`。
-- `GET /sheet/{id}` 応答 `{title,created_at,updated_at,nodes,links,groups,notes}`。メタデータを `metadata` にまとめた形式にも対応。
+- `PUT /sheet/{id}` 入力 `{title,nodes,links,groups,notes}`、応答 `{ok:true}`。
+- `GET /sheet/{id}` 応答 `{id,title,created_at,updated_at,nodes,links,groups,notes}`。`body` や `metadata` でラップしません。
 - `GET /sheets` 応答 `[{id,title,updated_at}]`。
-- `DELETE /sheet/{id}` 成功時は空またはJSON。
-- `GET /models` 応答はモデル名の配列、`[{id}]` または `{data:[{id}]}`。
-- `GET /state` 応答はオブジェクト。`PUT /state` は渡されたキーだけを更新。
+- `DELETE /sheet/{id}` 成功時は `{ok:true}`。
+- `GET /models` 応答 `{data:[{id}]}`。モデル名の配列や旧 `models` ラップは受け付けません。
+- `GET /state` 応答は設定キーを直接持つオブジェクト。`PUT /state` も `{last_used_model: "..."}` のように設定キーを直接送り、渡されたキーだけを更新。`state` でラップしません。成功応答は `{ok:true}`。
 - 設定キーは `last_used_model`、`user_prompt`、`last_opened_sheet_id`。
 
 ## AI要求
@@ -17,7 +17,7 @@
 
 入力は `{model_name,mode,sheet_id,target_node_id,system_prompt,text?}`。
 
-仕様書に未定義の `mode` 値はモックに合わせて `expand`（関連）、`newview`（新視点）、`link`、`merge`、`group`、`note`（要約）、`mutter` としています。全体対象は `target_node_id: ""`。ひとりごと本文は `text`、システムプロンプトは `system_prompt` で渡します。プロンプトは `/state` の `user_prompt` にも保存します。
+仕様書に未定義の `mode` 値はモックに合わせて `expand`（関連）、`newview`（新視点）、`link`、`merge`、`group`、`note`（要約）、`mutter` としています。全体対象は `target_node_id: ""`。空文字列はそのまま送信し、未指定・`null`・文字列以外は送信前にエラーにします。ひとりごと本文は `text`、システムプロンプトは `system_prompt` で渡します。プロンプトは `/state` の `user_prompt` にも保存します。
 
 ## AI応答
 
