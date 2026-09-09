@@ -7,7 +7,10 @@ import os
 import sqlite3
 import uuid
 
-STORAGE_DIR = os.environ.get('STORAGE_DIR', '/storage')
+from services import config
+
+# シートとデータベースの保存先。
+STORAGE_DIR = config.STORAGE_DIR
 DB_PATH = os.path.join(STORAGE_DIR, 'db.sqlite')
 SHEETS_DIR = os.path.join(STORAGE_DIR, 'sheets')
 

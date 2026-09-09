@@ -161,8 +161,8 @@ FE
 
 BE  
 
-- [ ] 定数ハードコードを、`python-dotenv` で `.env` から注入するよう変更
-- [ ] 組込のシステムプロンプト（`ai_service.py`の`_SYSTEM_BASE`/`_build_prompt`/モード別指示）テスト追加
+- [x] 定数ハードコードを、`python-dotenv` で `.env` から注入するよう変更
+- [x] 組込のシステムプロンプト（`ai_service.py`の`_SYSTEM_BASE`/`_build_prompt`/モード別指示）テスト追加
 　　
 ### コードフリーズ (9/10 ALL)
 

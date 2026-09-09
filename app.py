@@ -3,7 +3,7 @@
 
 from flask import Flask, jsonify, request, send_from_directory
 
-from services import ai_service, database_service, sheet_format_service
+from services import ai_service, config, database_service, sheet_format_service
 
 app = Flask(__name__)
 
@@ -140,4 +140,4 @@ def handle_internal_error(e):
 
 if __name__ == '__main__':
     database_service.init_db()
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    app.run(debug=config.FLASK_DEBUG, host=config.FLASK_HOST, port=config.FLASK_PORT)

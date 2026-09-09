@@ -3,12 +3,12 @@
 
 from openai import OpenAI, APIConnectionError, APITimeoutError, APIStatusError
 
-from services import sheet_format_service
+from services import config, sheet_format_service
 
-client = OpenAI(base_url="http://localhost:11434/v1", api_key="ollama")
+client = OpenAI(base_url=config.OLLAMA_BASE_URL, api_key=config.OLLAMA_API_KEY)
 
 # LLM推論のタイムアウト（秒）
-LLM_TIMEOUT = 120
+LLM_TIMEOUT = config.LLM_TIMEOUT
 
 # AIモードの表示名マッピング
 _MODE_LABELS = {
