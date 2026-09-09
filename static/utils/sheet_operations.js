@@ -8,14 +8,26 @@ export function findNode(sheet, id) {
   return node;
 }
 
-// ノードIDを受け取り、子を親へつなぎ直して対象と関連参照を削除する。
+// ノードIDを受け取り、子孫と接続・所属をまとめて削除する。
 export function removeNode(sheet, id) {
   const node = findNode(sheet, id);
   if (node.parent === null) throw new Error('テーマノードは削除できません。');
-  sheet.nodes.forEach(child => { if (child.parent === id) child.parent = node.parent; });
-  sheet.nodes = sheet.nodes.filter(entry => entry.id !== id);
-  sheet.links = sheet.links.filter(link => link.a !== id && link.b !== id);
-  sheet.groups.forEach(group => { group.members = group.members.filter(member => member !== id); });
+  const children = new Map();
+  sheet.nodes.forEach(entry => {
+    if (!children.has(entry.parent)) children.set(entry.parent, []);
+    children.get(entry.parent).push(entry.id);
+  });
+  const removed = new Set();
+  const pending = [id];
+  while (pending.length) {
+    const current = pending.pop();
+    if (removed.has(current)) continue;
+    removed.add(current);
+    pending.push(...(children.get(current) || []));
+  }
+  sheet.nodes = sheet.nodes.filter(entry => !removed.has(entry.id));
+  sheet.links = sheet.links.filter(link => !removed.has(link.a) && !removed.has(link.b));
+  sheet.groups.forEach(group => { group.members = group.members.filter(member => !removed.has(member)); });
 }
 
 // 端点とコメントを受け取り、重複のない無向エッジを追加する。

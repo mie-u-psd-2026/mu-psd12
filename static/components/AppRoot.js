@@ -30,10 +30,10 @@ const AI_MODES = { related: 'expand', perspective: 'newview', link: 'link', merg
 // 共有状態と画面操作を接続して返す。
 function setup() {
   const session = useSheetSession();
-  const wheel = useWheel();
+  const mode = ref('view');
+  const wheel = useWheel(() => mode.value);
   const settings = useAppSettings();
   const panels = useEditorPanels(session, wheel);
-  const mode = ref('view');
   const fileInput = ref(null);
   const isStarting = ref(true);
   const isAiPreparing = ref(false);
@@ -53,7 +53,7 @@ function setup() {
     } finally { isStarting.value = false; }
   });
   watch(session.version, () => { targetAction.value = null; });
-  watch(mode, () => { panels.closeAll(); targetAction.value = null; });
+  watch(mode, () => { panels.closeEdit(); panels.closeNote(); targetAction.value = null; });
   watch(wheel.selection, value => {
     if (value?.kind === 'mode') mode.value = value.entry.value;
     if (value?.kind === 'group') panels.selectGroup(value.entry.value);
@@ -129,6 +129,8 @@ function setup() {
     if (controlsLocked.value || session.pendingAction.value) return;
     wheel.handlePointerDown(event);
   }
+  // スクロールによるモード選択をホイールへ渡す。
+  function handleWheelRequested(event) { if (!controlsLocked.value) wheel.scrollMode(event, mode.value); }
   // キーボード操作用ホイールを開く。
   function handleOpenWheel(event) { if (!controlsLocked.value) wheel.openKeyboard(event); }
   // ホイール選択を確定する。
@@ -187,15 +189,16 @@ function setup() {
     handleNoteCreate, handleNoteEdit, handleNoteSave, handleNoteClose, handleNoteDelete, handleNotice,
     handleNew, handleOpenList, handleCloseList, handleLoad, handleDeleteSheet, handleSave, handleExport,
     handleImport, handleFile, handleUndo, handleRedo, handleConfirm, handleCancel,
-    handlePointerDown, handleOpenWheel, handleWheelSelect, handleWheelClose, handleModelChanged, handlePromptChanged,
+    handlePointerDown, handleOpenWheel, handleWheelRequested, handleWheelSelect, handleWheelClose, handleModelChanged, handlePromptChanged,
     handleModelsRefresh, handleSettingsSave, handleTargetSelected, handleWholeSummary, handleTargetCancel, handleMutter,
     handleProposalCommit, handleProposalReject };
 }
 // 提案中は編集操作をロックし、パン・ズームによる確認は可能にする。
 const template = `<main class="app-root" @pointerdown="handlePointerDown">
+  <div class="vignette" aria-hidden="true"></div>
   <div class="sheet-workspace" :inert="isBusy || isStarting || isAiPreparing || !!pendingAction || hasPanel">
     <sheet-canvas :key="version" :sheet-state="sheetState" :mode="mode" :proposal="proposal" :is-locked="isLocked || hasPanel"
-      :target-prompt="targetPrompt" @mode-changed="handleModeChanged" @node-added="handleNodeAdded" @node-text-changed="handleNodeTextChanged"
+      :target-prompt="targetPrompt" @mode-changed="handleModeChanged" @wheel-requested="handleWheelRequested" @node-added="handleNodeAdded" @node-text-changed="handleNodeTextChanged"
       @node-removed="handleNodeRemoved" @link-added="handleLinkAdded" @group-requested="handleGroupRequested"
       @edit-requested="handleEditRequested" @target-selected="handleTargetSelected" @notice="handleNotice"></sheet-canvas>
     <header class="app-header"><h1 class="app-title">AIサポート付きブレスト</h1>

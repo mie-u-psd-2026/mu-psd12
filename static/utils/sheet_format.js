@@ -74,3 +74,10 @@ export function parseSheet(value) {
   const notes = value.notes.map(note => ({ id: note.id, title: requireText(note.title), body: requireText(note.body) }));
   return { nodes, links, groups, notes };
 }
+
+// 既存IDの最大連番の次を返す。旧形式のIDは変更しない。
+export function nextNodeId(nodes) {
+  const maximum = nodes.reduce((max, node) => /^n\d+$/.test(node.id) ?
+    (BigInt(node.id.slice(1)) > max ? BigInt(node.id.slice(1)) : max) : max, 0n);
+  return 'n' + (maximum + 1n);
+}

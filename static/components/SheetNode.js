@@ -1,4 +1,4 @@
-// ノードの描画、インライン編集、800ms長押し削除を扱う。
+// ノードの描画、インライン編集、600ms長押し削除を扱う。
 import { ref, watch, nextTick, onMounted, onBeforeUnmount } from 'vue';
 // コンポーネントの識別名。
 const name = 'SheetNode';
@@ -44,7 +44,7 @@ function setup(props, { emit }) {
     if (props.isLocked) return;
     emit('selected', props.node.id, event);
   }
-  // 左長押しを開始し、800ms継続した場合だけ削除を要求する。
+  // 左長押しを開始し、600ms継続した場合だけ削除を要求する。
   function handleHold(event) {
     if (!props.canRemove || props.isLocked || event.button !== 0) return;
     event.preventDefault();
@@ -56,7 +56,7 @@ function setup(props, { emit }) {
       if (!isHolding.value) return;
       handleCancelHold();
       emit('removeRequested', props.node.id);
-    }, 800);
+    }, 600);
   }
   // マウス移動で長押しが取り消されるよう開始位置と比較する。
   function handleMove(event) {

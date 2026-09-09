@@ -18,11 +18,13 @@ const AI_ENTRIES = [
   { value: 'group', label: 'グループ化', icon: 'layers' },
   { value: 'summary', label: 'ノートに要約', icon: 'file-text' },
 ];
-// 右クリックの長押し判定時間。
-const HOLD_DELAY = 350;
+// スクロール終了後の表示時間。
+const SCROLL_DELAY = 650;
+// 連続スクロールで選択を進める最小間隔。
+const SCROLL_INTERVAL = 180;
 
 // 汎用の開閉・選択処理と、マウス操作のハンドラを返す。
-export function useWheel() {
+export function useWheel(readMode = () => 'view') {
   const isOpen = ref(false);
   const kind = ref('mode');
   const entries = ref(MODE_ENTRIES);
@@ -31,7 +33,8 @@ export function useWheel() {
   const isKeyboard = ref(false);
   const selection = ref(null);
   const activeEntry = computed(() => entries.value[activeIndex.value]);
-  let holdTimer;
+  let scrollTimer;
+  let lastScroll = -Infinity;
   let isHolding = false;
   let isWheelPriority = false;
   let origin = { x: 0, y: 0 };
@@ -48,9 +51,9 @@ export function useWheel() {
     isOpen.value = true;
   }
 
-  // 長押し待機と選択状態を解除して閉じる。
+  // スクロールのタイマーと選択状態を解除して閉じる。
   function close() {
-    clearTimeout(holdTimer);
+    clearTimeout(scrollTimer);
     isHolding = false;
     isOpen.value = false;
     activeIndex.value = -1;
@@ -62,16 +65,16 @@ export function useWheel() {
     close();
   }
 
-  // キャンバス上の右クリックを受け取り、長押しの判定を始める。
+  // キャンバス上の右クリックを受け取り、メニューを即座に表示する。
   function handlePointerDown(event) {
-    if (event.button !== 2 || !event.target.closest('.sheet-canvas') || event.target.closest('input, textarea')) return;
+    if (event.button !== 2 || !event.target.closest('.sheet-canvas, .wheel-backdrop') || event.target.closest('input, textarea')) return;
     event.preventDefault();
     close();
     isHolding = true;
     isKeyboard.value = false;
     hasShift = event.shiftKey;
     origin = { x: event.clientX, y: event.clientY };
-    holdTimer = setTimeout(() => open(hasShift ? 'ai' : 'mode', hasShift ? AI_ENTRIES : MODE_ENTRIES, origin), HOLD_DELAY);
+    open(hasShift ? 'ai' : 'mode', hasShift ? AI_ENTRIES : MODE_ENTRIES, origin);
   }
 
   // カーソルの角度を項目番号へ変換し、中央では未選択にする。
@@ -91,15 +94,44 @@ export function useWheel() {
     else close();
   }
 
-  // メニュー表示中のスクロールを優先し、通常のモード切替への伝播を止める。
+  // スクロールへ主導権を移し、選択中のモードを表示・即時適用する。
+  function scrollMode(event, mode = readMode()) {
+    if (event.ctrlKey || !event.deltaY) return;
+    const wasScrolling = isWheelPriority && isOpen.value;
+    clearTimeout(scrollTimer);
+    isHolding = false;
+    isKeyboard.value = false;
+    if (!wasScrolling) {
+      open('mode', MODE_ENTRIES, { x: event.clientX, y: event.clientY });
+      activeIndex.value = MODE_ENTRIES.findIndex(entry => entry.value === mode);
+      lastScroll = -Infinity;
+    }
+    isWheelPriority = true;
+    if (performance.now() - lastScroll >= SCROLL_INTERVAL) {
+      activeIndex.value = (activeIndex.value + Math.sign(event.deltaY) + MODE_ENTRIES.length) % MODE_ENTRIES.length;
+      selection.value = { kind: 'mode', entry: activeEntry.value };
+      lastScroll = performance.now();
+    }
+    scrollTimer = setTimeout(close, SCROLL_DELAY);
+  }
+
+  // 表示中のスクロールはモード切替、Ctrl併用は背後のキャンバスでズームする。
   function handleScroll(event) {
     if (!isOpen.value) return;
+    if (event.ctrlKey) {
+      if (!event.target.closest?.('.wheel-backdrop')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      close();
+      document.querySelector('.sheet-canvas')?.dispatchEvent(new window.WheelEvent('wheel', {
+        bubbles: true, cancelable: true, ctrlKey: true, deltaY: event.deltaY,
+        clientX: event.clientX, clientY: event.clientY,
+      }));
+      return;
+    }
     event.preventDefault();
     event.stopPropagation();
-    if (!event.deltaY) return;
-    isWheelPriority = true;
-    const length = entries.value.length;
-    activeIndex.value = (activeIndex.value + Math.sign(event.deltaY) + length) % length;
+    scrollMode(event);
   }
 
   // ShiftでAIメニューを切り替え、Escapeで選択を取り消す。
@@ -154,5 +186,5 @@ export function useWheel() {
     window.removeEventListener('wheel', handleScroll, true);
   });
   return { isOpen, kind, entries, center, activeIndex, isKeyboard, selection,
-    open, close, select, openKeyboard, handlePointerDown };
+    open, close, select, scrollMode, openKeyboard, handlePointerDown };
 }
