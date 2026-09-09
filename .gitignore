@@ -1,5 +1,6 @@
 .env
 storage
+tests/ai_smoke/results.jsonl
 
 # Python 仮想環境
 .venv

@@ -61,6 +61,19 @@ def serialize_for_llm(body):
 # LLM応答パース（8.1.2 操作プレフィックス付き行の解釈）
 # ============================================================
 
+def parse_node_parents(serialized_sheet):
+    """シリアライズ済みシートからid→親IDの対応表を返す（Mのマージ処理で使用）。"""
+    parents = {}
+    for raw_line in serialized_sheet.strip().split('\n'):
+        line = raw_line.strip()
+        if not line:
+            continue
+        parts = line.split(_SEP)
+        if parts[0] == 'N' and len(parts) >= 3:
+            parents[parts[1]] = parts[2] if parts[2] != '-' else None
+    return parents
+
+
 def parse_llm_response(text):
     """LLM応答行をパースし、操作配列（行文字列リスト）とゴーストノード配列を返す。
 

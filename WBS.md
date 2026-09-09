@@ -117,7 +117,7 @@
 
 FE/BE  
 
-- [ ] APIリクエスト・レスポンスボディの統一（仕様書8.2に合わせる）
+- [x] APIリクエスト・レスポンスボディの統一（仕様書8.2に合わせる）
   - [x] BE: `PUT /sheet/{id}`: リクエストボディのフラット化（`body`ネスト廃止）
   - [x] BE: `GET /sheet/{id}`: レスポンスのフラット化（`body`ネスト廃止、作成・更新日時を含める）
   - [x] BE: `GET /sheets`: レスポンスのラップ解除（bare配列化）
@@ -130,7 +130,7 @@ FE/BE
   - [x] BE: AIノート生成モード（4.6・8.2`note`）が未実装
   - [x] BE: システムプロンプトの`L+`が`newId|nodeA|nodeB|comment`（4フィールド）で、design-document.md 8.1.2記載の`L+|a|b|comment`（3フィールド）と不一致
   - [x] BE: ひとりごとメモ（4.7）のAI連携が未実装。`/ai`が`text`を受け取らず、`ai_service`にも`mutter`モードの指示・プロンプトへの本文組込が無いため、ユーザーの入力がAIに渡らない
-  - [ ] BE: AI機能ごとにAIが生成する操作を制限
+  - [x] BE: AI機能ごとにAIが生成する操作を制限（プロンプト・実行時フィルタ双方。mergeのDSLも`M|newId|id,id|text`に再設計）
 
 FE  
 
@@ -172,6 +172,8 @@ BE
 - [x] 定数ハードコードを、`python-dotenv` で `.env` から注入するよう変更
 - [x] 組込のシステムプロンプト（`ai_service.py`の`_SYSTEM_BASE`/`_build_prompt`/モード別指示）テスト追加
 - [x] LLM応答をストリーミングでサーバーコンソールに逐次出力するデバッグ機能追加
+- [x] 各AIモードの応答フォーマット準拠を実機Ollamaで確認する診断スクリプト追加（`tests/ai_smoke/run.py`、複数回実行して失敗傾向をログ化）
+- [x] `LLM_DEBUG_STREAM`のコンソール出力がWindows(cp932)で一部文字により例外落ちする不具合を修正
 　　
 ### コードフリーズ (9/10 ALL)
 
