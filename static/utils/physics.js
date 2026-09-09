@@ -3,9 +3,11 @@
 const NODE_GAP = 24;
 
 // ノード配列と接続を受け取り、座標と速度を1ステップ更新して最大速度・重なりを返す。
-export function stepPhysics(bodies, edges) {
+export function stepPhysics(bodies, edges, groups = []) {
   const forces = bodies.map(() => ({ x: 0, y: 0 }));
   const indexes = new Map(bodies.map((body, index) => [body.id, index]));
+  const membership = new Map();
+  groups.forEach((group, index) => group.members.forEach(id => membership.set(id, index)));
   let overlap = 0;
   for (let i = 0; i < bodies.length; i++) {
     for (let j = i + 1; j < bodies.length; j++) {
@@ -15,7 +17,10 @@ export function stepPhysics(bodies, edges) {
       let y = b.y - a.y;
       if (Math.abs(x) + Math.abs(y) < .01) { x = i % 2 ? 1 : -1; y = 1; }
       const distance = Math.max(1, Math.hypot(x, y));
-      const force = Math.min(12, 18000 / (distance * distance));
+      const isSameGroup = membership.has(a.id) && membership.get(a.id) === membership.get(b.id);
+      const repulsion = Math.min(12, 24000 / (distance * distance)) * (isSameGroup ? .7 : 1.4);
+      const attraction = isSameGroup ? Math.max(0, distance - Math.max(160, (a.width + b.width) / 2 + NODE_GAP)) * .012 : 0;
+      const force = repulsion - attraction;
       forces[i].x -= x / distance * force;
       forces[i].y -= y / distance * force;
       forces[j].x += x / distance * force;

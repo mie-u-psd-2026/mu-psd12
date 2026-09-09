@@ -1,5 +1,5 @@
 // バックエンドで解析済みのJSON提案を検証し、一括適用用のシートを作る。
-import { parseSheet, GROUP_COLORS } from './sheet_format.js';
+import { parseSheet, GROUP_COLORS, nextNodeId } from './sheet_format.js';
 import { removeNode, mergeNodes, detachMembers } from './sheet_operations.js';
 
 // 任意項目を配列として検証し、未指定の場合は空配列を返す。
@@ -32,9 +32,12 @@ export function prepareProposal(sheet, proposal) {
   if (new Set(removes).size !== removes.length) throw new Error('削除対象が重複しています。');
   const aliases = new Map();
   const existing = new Set(after.nodes.map(node => node.id));
+  const allocated = [...after.nodes];
   for (const ghost of ghosts) {
     if (!ghost || typeof ghost.id !== 'string' || !ghost.id || aliases.has(ghost.id)) throw new Error('AIノードのIDが不正です。');
-    aliases.set(ghost.id, existing.has(ghost.id) ? ghost.id : crypto.randomUUID());
+    const id = existing.has(ghost.id) ? ghost.id : nextNodeId(allocated);
+    aliases.set(ghost.id, id);
+    allocated.push({ id });
   }
   const mapped = ghosts.map(ghost => ({ id: aliases.get(ghost.id), kind: ghost.parent === null ? 'theme' : 'idea',
     text: ghost.text, parent: aliases.get(ghost.parent) || ghost.parent }));
@@ -48,7 +51,8 @@ export function prepareProposal(sheet, proposal) {
       if (index < 0) after.nodes.push(node);
       else after.nodes[index] = node;
     }
-    removes.forEach(id => removeNode(after, id));
+    if (removes.some(id => !after.nodes.some(node => node.id === id))) throw new Error('削除するノードがありません。');
+    removes.forEach(id => { if (after.nodes.some(node => node.id === id)) removeNode(after, id); });
   }
   // 接続・グループの削除IDは解析済みJSONの任意フィールドで受け取る。
   for (const id of readArray(proposal.removed_links)) {

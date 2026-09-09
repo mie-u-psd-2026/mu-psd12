@@ -1,6 +1,5 @@
 # database_service / sheet_format_service / APIエンドポイントの単体テスト。
 
-import json
 import os
 import sys
 import tempfile
@@ -134,12 +133,13 @@ class DatabaseServiceTest(unittest.TestCase):
         self.assertFalse(database_service.delete_sheet(sheet_id))
 
     def test_state_merge(self):
+        # get_state()はupdate_state()でjson.dumpsされた値をjson.loadsして返す（対称なエンコード/デコード）。
         database_service.update_state({'a': 1, 'b': 2})
         database_service.update_state({'b': 3, 'c': 4})
         state = database_service.get_state()
-        self.assertEqual(json.loads(state['a']), 1)
-        self.assertEqual(json.loads(state['b']), 3)
-        self.assertEqual(json.loads(state['c']), 4)
+        self.assertEqual(state['a'], 1)
+        self.assertEqual(state['b'], 3)
+        self.assertEqual(state['c'], 4)
 
 
 class ApiErrorFormatTest(unittest.TestCase):
@@ -230,12 +230,13 @@ class ApiErrorFormatTest(unittest.TestCase):
         self.assertEqual(data[0]['title'], 'A')
 
     def test_state_api(self):
-        # design-document.md 8.2: GET/PUT /stateは{state:{...}}でラップせずキーバリューを直接扱う
+        # design-document.md 8.2: GET/PUT /stateは{state:{...}}でラップせずキーバリューを直接扱う。
+        # 値は保存時にjson.dumpsされるため、取得時にはjson.loadsで復元し、二重エンコードしない。
         app = self._patch_storage()
         client = app.test_client()
         self.assertEqual(client.put('/state', json={'key': 'v'}).status_code, 200)
         resp = client.get('/state')
-        self.assertEqual(resp.get_json()['key'], '"v"')
+        self.assertEqual(resp.get_json()['key'], 'v')
 
     def test_get_models_openai_compatible_format(self):
         # design-document.md 8.2: {"data": [{"id": "..."}]}のOpenAI互換形式で透過する
