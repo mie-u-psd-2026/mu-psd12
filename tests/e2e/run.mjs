@@ -207,24 +207,31 @@ log('モード別カーソル表示');
   log('未保存確認ダイアログの表示');
 }
 
-// ノード接続（作成・コメント編集・削除・Undo）
+// ノード接続（コメント必須のインライン作成・編集・削除・Undo）
 await switchMode(page, 'Join Node');
 await page.locator('[data-node-id="n0"] .node-button').click();
 await page.locator(`[data-node-id="${grandchildId}"] .node-button`).click();
 await page.waitForTimeout(50);
-assert.equal(await page.locator('.edge-hit').count(), 1);
-await page.locator('.edge-hit').click();
-await page.locator('.edit-panel textarea').fill('E2E接続コメント');
-await page.locator('.edit-panel button[type="submit"]').click();
+assert.equal(await page.locator('.edge-comment-form input').count(), 1, '接続作成直後にコメント入力欄がインライン表示される');
+assert.equal(await page.locator('.edge-hit').count(), 0, 'コメント確定前は接続がまだ作成されていない');
+await page.locator('.edge-comment-form input').fill('E2E接続コメント');
+await page.locator('.edge-comment-form input').press('Enter');
 await page.waitForTimeout(50);
+assert.equal(await page.locator('.edge-hit').count(), 1, 'コメント確定で接続が作成される');
+assert.equal(await page.locator('.edge-comment').textContent(), 'E2E接続コメント', 'コメントが中点付近に常時表示される');
 await page.locator('.edge-hit').click();
-await page.locator('.edit-panel').getByRole('button', { name: 'Delete', exact: true }).click();
+await page.locator('.edge-comment-form input').fill('E2E編集後コメント');
+await page.locator('.edge-comment-form input').press('Enter');
+await page.waitForTimeout(50);
+assert.equal(await page.locator('.edge-comment').textContent(), 'E2E編集後コメント');
+await page.locator('.edge-hit').click();
+await page.locator('.edge-comment-form .icon-button').click();
 await page.waitForTimeout(50);
 assert.equal(await page.locator('.edge-hit').count(), 0);
 await page.getByRole('button', { name: 'Undo', exact: true }).click();
 await page.waitForTimeout(50);
 assert.equal(await page.locator('.edge-hit').count(), 1, 'Undoで接続が復元される');
-log('ノード接続（作成・コメント編集・削除・Undo）');
+log('ノード接続（コメント必須のインライン作成・編集・削除・Undo）');
 
 // グループ化（作成・タイトル/色編集・除外・Undo）
 await switchMode(page, 'Group Node');

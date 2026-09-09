@@ -30,8 +30,8 @@ export function removeNode(sheet, id) {
   sheet.groups.forEach(group => { group.members = group.members.filter(member => !removed.has(member)); });
 }
 
-// 端点とコメントを受け取り、重複のない無向エッジを追加する。
-export function addLink(sheet, a, b, comment = '') {
+// 端点とコメントを受け取り、重複のない無向エッジを追加する。コメントは必須（parseSheetで検証）。
+export function addLink(sheet, a, b, comment) {
   findNode(sheet, a);
   findNode(sheet, b);
   if (a === b) throw new Error('Cannot connect a node to itself.');

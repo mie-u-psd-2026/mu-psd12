@@ -158,6 +158,10 @@
       transform: translateX(-50%); max-width: calc(100vw - 64px); white-space: normal;
       text-align: center; color: var(--mono-700); font-size: 11px; pointer-events: none; }
 
+    /* 操作対象・ラベル類での意図しないテキスト選択を防ぐ。 */
+    .sheet-canvas, .node-button, .canvas-hint, .toolbar-hint, .wheel-label, .wheel-center,
+    .group-title, .edge-comment { user-select: none; }
+
 /* 共通UI：モノクロ、AIのシアン、グループのパステル。 */
 :root {
   --mono-500: #8a8a8a;
@@ -180,7 +184,8 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .text-button, .icon-button {
   border: 0; background: transparent; color: inherit; cursor: pointer; padding: 8px;
 }
-.text-button:hover:not(:disabled) { text-decoration: underline; text-underline-offset: 4px; }
+.text-button:not(:disabled) { text-decoration: underline; text-underline-offset: 4px; }
+.text-button:hover:not(:disabled) { opacity: .7; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
 .muted { color: var(--mono-500); font-size: 12px; }
 .ai-accent { color: var(--ai-cyan-dim); }
@@ -195,7 +200,7 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .right-tools { right: 32px; }
 .notes-panel { max-height: 24vh; overflow-y: auto; margin-bottom: 32px; }
 .notes-panel details { margin-top: 16px; }
-.notes-panel summary { cursor: pointer; font-size: 13px; }
+.notes-panel summary { cursor: pointer; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
 .note-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6; }
 .mutter-input label, .model-settings label { display: block; font-size: 12px; margin-bottom: 8px; }
 .mutter-input textarea, .model-settings textarea {
@@ -221,17 +226,22 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .sheet-list p { font-size: 13px; }
 .sheet-list-entry { display: block; width: 100%; padding: 16px 0; text-align: left; color: inherit;
   border: 0; background: transparent; cursor: pointer; }
-.sheet-list-entry strong { display: block; overflow-wrap: anywhere; }
+.sheet-list-entry strong { display: block; overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
 .sheet-list-entry time { display: block; margin-top: 8px; font-size: 11px; color: var(--mono-500); }
 .wheel-backdrop { position: fixed; inset: 0; z-index: 10; }
 .radial-wheel { position: absolute; width: 0; height: 0; }
 .wheel-center { position: absolute; transform: translate(-50%, -50%); font-size: 12px; white-space: nowrap;
   background: transparent; padding: 8px; pointer-events: none; }
 .wheel-entry { position: absolute; width: 48px; height: 48px; transform: translate(-50%, -50%);
-  display: flex; align-items: center; justify-content: center; border: 0; background: transparent;
-  color: inherit; cursor: pointer; filter: drop-shadow(0 0 4px white); }
-.wheel-entry:hover, .wheel-entry.is-active { color: var(--mono-900); transform: translate(-50%, -50%) scale(1.15); }
-.ai-accent .wheel-entry:hover, .ai-accent .wheel-entry.is-active { color: var(--ai-cyan-dim); }
+  display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 0;
+  background: white; color: inherit; cursor: pointer;
+  box-shadow: 0 0 6px rgba(255, 255, 255, .9), 0 1px 4px rgba(0, 0, 0, .15);
+  transition: background-color .15s, box-shadow .15s, transform .15s; }
+.wheel-entry:hover { background: var(--mono-100); color: var(--mono-900); transform: translate(-50%, -50%) scale(1.1); }
+.wheel-entry.is-active { background: var(--mono-300); color: var(--mono-900); transform: translate(-50%, -50%) scale(1.15);
+  box-shadow: 0 0 10px rgba(0, 0, 0, .25), 0 2px 6px rgba(0, 0, 0, .2); }
+.ai-accent .wheel-entry:hover { background: #d7fbff; color: var(--ai-cyan-dim); }
+.ai-accent .wheel-entry.is-active { background: var(--ai-cyan); color: white; }
 .wheel-label { position: absolute; top: 44px; left: 50%; transform: translateX(-50%);
   font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; background: transparent; padding: 4px; }
 .wheel-entry:hover .wheel-label, .wheel-entry:focus-visible .wheel-label, .wheel-entry.is-active .wheel-label { opacity: 1; }
@@ -256,8 +266,15 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .ai-group { stroke: var(--ai-cyan-dim); stroke-dasharray: 6 4; stroke-width: 3; }
 .edge-hit { stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: crosshair; }
 .edge-hit:focus-visible { stroke: var(--ai-cyan); stroke-opacity: .3; outline: none; }
+.edge-comment { fill: var(--mono-700); font-size: 12px; pointer-events: none; }
+.edge-comment-editor { overflow: visible; pointer-events: auto; }
+.edge-comment-form { display: flex; align-items: center; gap: 4px; height: 100%; pointer-events: auto; }
+.edge-comment-form input { flex: 1; min-width: 0; border: 0; border-radius: 4px; background: var(--mono-100);
+  color: var(--mono-900); font-size: 12px; padding: 4px 8px; pointer-events: auto; }
+.edge-comment-form .icon-button { min-width: 20px; min-height: 20px; padding: 0; font-size: 14px; line-height: 1;
+  pointer-events: auto; }
 .group-title { fill: var(--mono-700); font-size: 12px; }
-.group-title.can-edit { pointer-events: auto; cursor: crosshair; }
+.group-title.can-edit { pointer-events: auto; cursor: crosshair; text-decoration: underline; }
 .edit-panel, .note-editor { position: fixed; z-index: 8; width: 320px; padding: 24px;
   background: var(--mono-bg); box-shadow: 0 8px 40px #0002; max-height: calc(100vh - 48px); overflow-y: auto; }
 .edit-panel label, .note-editor label { display: block; margin-bottom: 16px; font-size: 12px; }

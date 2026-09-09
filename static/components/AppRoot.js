@@ -68,7 +68,11 @@ function setup() {
   // 長押し対象のノードを削除する。
   function handleNodeRemoved(id) { session.deleteNode(id); }
   // 2つのノードを接続する。
-  function handleLinkAdded(a, b) { session.createLink(a, b); }
+  function handleLinkAdded(a, b, comment) { session.createLink(a, b, comment); }
+  // 接続のコメントを更新する。
+  function handleLinkCommentChanged(id, comment) { session.changeLink(id, comment); }
+  // 接続を削除する。
+  function handleLinkDeleteRequested(id) { session.deleteLink(id); }
   // グループ所属の選択を開く。
   function handleGroupRequested(id, event) { panels.openGroups(id, event); }
   // 接続・グループの編集パネルを開く。
@@ -182,6 +186,7 @@ function setup() {
     isWheelOpen: wheel.isOpen, wheelEntries: wheel.entries, wheelCenter: wheel.center,
     wheelIndex: wheel.activeIndex, wheelKind: wheel.kind, isWheelKeyboard: wheel.isKeyboard,
     handleModeChanged, handleTitleChanged, handleNodeAdded, handleNodeTextChanged, handleNodeRemoved, handleLinkAdded,
+    handleLinkCommentChanged, handleLinkDeleteRequested,
     handleGroupRequested, handleEditRequested, handleEditSave, handleEditDelete, handleEditClose,
     handleNoteCreate, handleNoteEdit, handleNoteSave, handleNoteClose, handleNoteDelete, handleNotice,
     handleNew, handleOpenList, handleCloseList, handleLoad, handleDeleteSheet, handleSave, handleExport,
@@ -196,7 +201,8 @@ const template = `<main class="app-root" @pointerdown="handlePointerDown">
   <div class="sheet-workspace" :inert="isBusy || isStarting || isAiPreparing || !!pendingAction || hasPanel">
     <sheet-canvas :key="version" :sheet-state="sheetState" :mode="mode" :proposal="proposal" :is-locked="isLocked || hasPanel"
       :target-prompt="targetPrompt" @mode-changed="handleModeChanged" @wheel-requested="handleWheelRequested" @node-added="handleNodeAdded" @node-text-changed="handleNodeTextChanged"
-      @node-removed="handleNodeRemoved" @link-added="handleLinkAdded" @group-requested="handleGroupRequested"
+      @node-removed="handleNodeRemoved" @link-added="handleLinkAdded" @link-comment-changed="handleLinkCommentChanged"
+      @link-delete-requested="handleLinkDeleteRequested" @group-requested="handleGroupRequested"
       @edit-requested="handleEditRequested" @target-selected="handleTargetSelected" @notice="handleNotice"></sheet-canvas>
     <header class="app-header"><h1 class="app-title">AI-Supported Brainstorm</h1>
       <mode-hud :mode="mode" @wheel-requested="handleOpenWheel"></mode-hud></header>
@@ -230,8 +236,8 @@ const template = `<main class="app-root" @pointerdown="handlePointerDown">
   <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="handleFile">
   <radial-wheel v-if="isWheelOpen" :entries="wheelEntries" :center="wheelCenter" :active-index="wheelIndex"
     :kind="wheelKind" :is-keyboard="isWheelKeyboard" @select="handleWheelSelect" @close="handleWheelClose"></radial-wheel>
-  <edit-panel v-if="editPanel" :key="editPanel.kind + (editPanel.item.id || '')" :heading="editPanel.kind === 'link' ? 'Edit Link' : 'Edit Group'"
-    :has-title="editPanel.kind !== 'link'" :title="editPanel.item.title" :comment="editPanel.item.comment" :color="editPanel.item.color"
+  <edit-panel v-if="editPanel" :key="editPanel.kind + (editPanel.item.id || '')" heading="Edit Group"
+    has-title :title="editPanel.item.title" :comment="editPanel.item.comment" :color="editPanel.item.color"
     :can-delete="editPanel.kind !== 'newGroup'" :x="editPanel.x" :y="editPanel.y"
     @save="handleEditSave" @delete="handleEditDelete" @close="handleEditClose"></edit-panel>
   <note-editor v-if="noteEditor" :note="noteEditor.note" @save="handleNoteSave" @close="handleNoteClose"></note-editor>

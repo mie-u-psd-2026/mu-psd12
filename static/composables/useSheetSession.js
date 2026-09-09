@@ -62,8 +62,8 @@ export function useSheetSession() {
 
   // ノードを削除し、子と参照を安全に整理する。
   function deleteNode(id) { return edit(() => removeNode(sheetState, id)); }
-  // 無向エッジを作成する。
-  function createLink(a, b) { return edit(() => addLink(sheetState, a, b)); }
+  // 無向エッジを作成する。コメントは必須。
+  function createLink(a, b, comment) { return edit(() => addLink(sheetState, a, b, comment)); }
   // エッジのコメントを更新する。
   function changeLink(id, comment) {
     return edit(() => {

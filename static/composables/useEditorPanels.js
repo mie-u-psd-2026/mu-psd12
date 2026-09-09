@@ -72,7 +72,6 @@ export function useEditorPanels(session, wheel) {
     const panel = editPanel.value;
     if (!panel) return;
     let success;
-    if (panel.kind === 'link') success = session.changeLink(panel.item.id, comment);
     if (panel.kind === 'group') success = session.changeGroup(panel.item.id, title, comment, color);
     if (panel.kind === 'newGroup') success = session.createGroup(panel.item.members, title, comment, color);
     if (success) closeEdit();
@@ -82,7 +81,6 @@ export function useEditorPanels(session, wheel) {
   function deleteEdit() {
     const panel = editPanel.value;
     if (!panel) return;
-    if (panel.kind === 'link') session.deleteLink(panel.item.id);
     if (panel.kind === 'group') session.deleteGroup(panel.item.id);
     closeEdit();
   }

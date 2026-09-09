@@ -160,11 +160,11 @@ FE
 - [x] ノード削除を子孫ごとの削除に変更（UI操作・AI提案`removes`の両方。design-document.md 4.1参照）
 - [x] 削除を 600ms に修正
 - [x] ノードID生成を`crypto.randomUUID()`から`n{連番}`形式の増分IDに変更
-- [ ] エッジのコメント表示・編集機能が未実装
-- [ ] CSS:user-select で意図しないテキスト選択の防止
-- [ ] ショートカットホイールの各選択領域に背景を追加（白・グロウ・円形）
+- [x] エッジのコメント表示・編集機能を実装（中点常時表示・インライン編集・必須化。design-document.md 4.1参照）
+- [x] CSS:user-select で意図しないテキスト選択の防止
+- [x] ショートカットホイールの各選択領域に背景を追加（未選択・ホバー・選択済みの3状態）
 - [x] AIホイールの`value`（related/perspective/summary）がBEの`mode`名（expand/newview/note）と不一致
-- [ ] インタラクト可能な文字列に常時下線表示
+- [x] インタラクト可能な文字列に常時下線表示
 - [x] UIラベルを全て英語表記に統一（テンプレート文言・aria-label・エラーメッセージ・index.html）
 
 BE  

@@ -14,6 +14,12 @@ function requireText(value) {
   return value;
 }
 
+// 空文字列を許さない必須テキスト項目用（間接エッジのコメント等）。
+function requireNonEmptyText(value) {
+  if (typeof value !== 'string' || !value.trim()) throw new Error('A required text field is empty.');
+  return value;
+}
+
 // 要素配列を受け取り、有効な一意IDの集合を返す。
 function collectIds(entries) {
   const ids = new Set();
@@ -59,7 +65,7 @@ export function parseSheet(value) {
     const pair = JSON.stringify([link.a, link.b].sort());
     if (pairs.has(pair)) throw new Error('A link is duplicated.');
     pairs.add(pair);
-    return { id: link.id, a: link.a, b: link.b, comment: requireText(link.comment) };
+    return { id: link.id, a: link.a, b: link.b, comment: requireNonEmptyText(link.comment) };
   });
   const assigned = new Set();
   const groups = value.groups.map(group => {

@@ -11,7 +11,8 @@ const props = { sheetState: { type: Object, required: true }, mode: { type: Stri
   proposal: Object, isLocked: Boolean, targetPrompt: { type: String, default: '' } };
 // 親が実行するシート変更と編集画面の要求。
 const emits = ['modeChanged', 'nodeAdded', 'nodeTextChanged', 'nodeRemoved', 'linkAdded',
-  'groupRequested', 'wheelRequested', 'editRequested', 'targetSelected', 'notice'];
+  'linkCommentChanged', 'linkDeleteRequested', 'groupRequested', 'wheelRequested', 'editRequested',
+  'targetSelected', 'notice'];
 // モードごとの操作説明。
 const HINTS = { view: 'Drag to pan', add: 'Click a node to add a child', edit: 'Click to edit text',
   remove: 'Hold 600ms to delete with descendants', join: 'Select a start and end node to connect', group: 'Click a node to choose membership, or a group name to edit' };
@@ -21,6 +22,7 @@ function setup(props, { emit }) {
   const physics = usePhysicsSimulation(() => props.sheetState);
   const editingId = ref(null);
   const joinStart = ref(null);
+  const pendingLink = ref(null);
   const isHolding = ref(false);
   const pan = ref({ x: 0, y: 0 });
   const zoom = ref(1);
@@ -45,7 +47,9 @@ function setup(props, { emit }) {
     return result;
   });
   const edges = computed(() => nodes.value.filter(node => node.parent !== null));
-  watch(() => [props.mode, props.isLocked, props.targetPrompt], () => { editingId.value = null; joinStart.value = null; });
+  watch(() => [props.mode, props.isLocked, props.targetPrompt], () => {
+    editingId.value = null; joinStart.value = null; pendingLink.value = null;
+  });
   watch(() => [editingId.value, isHolding.value, !!props.proposal], values => physics.pause(values.some(Boolean)));
 
   // 対象ノードとイベントを受け取り、モードに対応する操作を実行する。
@@ -58,7 +62,7 @@ function setup(props, { emit }) {
     if (props.mode === 'group') emit('groupRequested', id, event);
     if (props.mode !== 'join') return;
     if (!joinStart.value) { joinStart.value = id; return; }
-    if (joinStart.value !== id) emit('linkAdded', joinStart.value, id);
+    if (joinStart.value !== id) pendingLink.value = { a: joinStart.value, b: id };
     joinStart.value = null;
   }
   // 長押し完了後に削除を要求する。
@@ -71,8 +75,17 @@ function setup(props, { emit }) {
   function handleTextCommitted(id, text) { editingId.value = null; emit('nodeTextChanged', id, text); }
   // 編集を取り消す。
   function handleEditCancelled() { editingId.value = null; }
-  // 接続編集の対象と位置を親へ渡す。
-  function handleLinkEdit(link, event) { emit('editRequested', 'link', link, event); }
+  // 接続コメントの確定。id指定なしは作成待ちだった接続の新規作成。
+  function handleLinkCommit(id, comment) {
+    if (id) { emit('linkCommentChanged', id, comment); return; }
+    const pending = pendingLink.value;
+    pendingLink.value = null;
+    if (pending) emit('linkAdded', pending.a, pending.b, comment);
+  }
+  // 空欄での確定取消。作成待ちの接続があれば破棄する。
+  function handleLinkCancelled() { pendingLink.value = null; }
+  // 編集中の接続の削除を親へ渡す。
+  function handleLinkDeleteRequested(id) { emit('linkDeleteRequested', id); }
   // グループ編集の対象と位置を親へ渡す。
   function handleGroupEdit(group, event) { emit('editRequested', 'group', group, event); }
   // Escapeで接続選択を解除する。
@@ -107,9 +120,10 @@ function setup(props, { emit }) {
   }
   // ドラッグを終了する。
   function handlePointerEnd() { drag = null; isDragging.value = false; }
-  return { isDragging, editingId, joinStart, positions, nodes, links, groups, edges, pan, zoom, hint, isRunning: physics.isRunning,
+  return { isDragging, editingId, joinStart, pendingLink, positions, nodes, links, groups, edges, pan, zoom, hint, isRunning: physics.isRunning,
     handleSelected, handleRemoved, handleHolding, handleSize, handleTextCommitted, handleEditCancelled,
-    handleLinkEdit, handleGroupEdit, handleEscape, handleWheel, handlePointerDown, handlePointerMove, handlePointerEnd };
+    handleLinkCommit, handleLinkCancelled, handleLinkDeleteRequested, handleGroupEdit, handleEscape,
+    handleWheel, handlePointerDown, handlePointerMove, handlePointerEnd };
 }
 // 提案中も元のシートを保持し、結果と削除予定の要素を重ねて表示する。
 const template = `<section class="sheet-canvas" aria-label="Brainstorm Sheet" :style="{ cursor: mode === 'view' ? (isDragging ? 'grabbing' : 'grab') : 'crosshair', backgroundSize: (24 * zoom) + 'px ' + (24 * zoom) + 'px', backgroundPosition: 'calc(50% + ' + pan.x + 'px) calc(50% + ' + pan.y + 'px)' }" @contextmenu.prevent
@@ -122,7 +136,10 @@ const template = `<section class="sheet-canvas" aria-label="Brainstorm Sheet" :s
         :is-removed="!!proposal?.groups.removed.includes(group.id)" @edit-requested="handleGroupEdit"></sheet-group>
       <sheet-edge v-for="link in links" :key="link.id" :from="positions[link.a]" :to="positions[link.b]" :link="link" type="indirect"
         :can-edit="mode === 'join' && !isLocked" :is-changed="!!proposal?.links.changed.includes(link.id)"
-        :is-removed="!!proposal?.links.removed.includes(link.id)" @edit-requested="handleLinkEdit"></sheet-edge>
+        :is-removed="!!proposal?.links.removed.includes(link.id)" @commit="handleLinkCommit"
+        @cancelled="handleLinkCancelled" @delete-requested="handleLinkDeleteRequested"></sheet-edge>
+      <sheet-edge v-if="pendingLink" :from="positions[pendingLink.a]" :to="positions[pendingLink.b]" type="indirect"
+        can-edit is-new @commit="handleLinkCommit" @cancelled="handleLinkCancelled"></sheet-edge>
       <sheet-edge v-for="node in edges" :key="'direct-' + node.id" :from="positions[node.parent]" :to="positions[node.id]"
         :is-changed="!!proposal?.nodes.changed.includes(node.id)" :is-removed="!!proposal?.nodes.removed.includes(node.id)"></sheet-edge>
     </svg>

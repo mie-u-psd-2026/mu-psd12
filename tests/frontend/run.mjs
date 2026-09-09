@@ -96,22 +96,41 @@ results.push('600ms長押し・取消、サブツリー削除、テーマ保護�
 await mode('Join Node');
 await click(document.querySelectorAll('.node-button')[0]);
 await click(document.querySelectorAll('.node-button')[2]);
+assert.equal(vm.sheetState.links.length, 0, 'コメント確定まで接続は作成されない');
+let commentInput = document.querySelector('.edge-comment-form input');
+assert(commentInput, '接続作成時にコメント入力欄がインライン表示される');
+await input(commentInput, '');
+commentInput.dispatchEvent(new Event('blur'));
+await settle();
+assert.equal(vm.sheetState.links.length, 0, '空欄のまま確定すると接続は作成されない');
+assert(!document.querySelector('.edge-comment-form'), '取消後は入力欄が閉じる');
+await click(document.querySelectorAll('.node-button')[0]);
+await click(document.querySelectorAll('.node-button')[2]);
+commentInput = document.querySelector('.edge-comment-form input');
+await input(commentInput, 'Link comment');
+commentInput.dispatchEvent(new Event('blur'));
+await settle();
 assert.equal(vm.sheetState.links.length, 1);
-assert(document.querySelector('.edge-hit'));
-await click(document.querySelector('.edge-hit'));
-await input(document.querySelector('.edit-panel textarea'), '接続コメント');
-await click(document.querySelector('.edit-panel button[type="submit"]'));
-assert.equal(vm.sheetState.links[0].comment, '接続コメント');
+assert.equal(vm.sheetState.links[0].comment, 'Link comment');
+assert.equal(document.querySelector('.edge-comment').textContent, 'Link comment', 'コメントが中点に常時表示される');
 const count = vm.sheetState.links.length;
-vm.createLink(grandchildId, 'n0'); await settle();
+vm.createLink(grandchildId, 'n0', 'dup'); await settle();
 assert.equal(vm.sheetState.links.length, count);
 assert(vm.message.includes('already connected'));
 await click(document.querySelector('.edge-hit'));
-await click([...document.querySelectorAll('.edit-panel button')].find(item => item.textContent === 'Delete'));
+commentInput = document.querySelector('.edge-comment-form input');
+assert.equal(commentInput.value, 'Link comment', '既存コメントが編集欄に反映される');
+await input(commentInput, '');
+commentInput.dispatchEvent(new Event('blur'));
+await settle();
+assert.equal(vm.sheetState.links[0].comment, 'Link comment', '空欄で確定しても既存コメントは維持される');
+await click(document.querySelector('.edge-hit'));
+document.querySelector('.edge-comment-form .icon-button').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+await settle();
 assert.equal(vm.sheetState.links.length, 0);
 await click(button('Undo'));
 assert.equal(vm.sheetState.links.length, 1);
-results.push('接続作成・コメント編集・削除、逆向き重複防止');
+results.push('接続作成（コメント必須・インライン編集）・削除・逆向き重複防止');
 
 await mode('Group Node');
 await click(document.querySelectorAll('.node-button')[1]);
@@ -209,7 +228,7 @@ results.push('AI前自動保存、差分表示、却下・一括承認、実ID�
 // 木構造の破壊、重複、循環、テーマの削除は全体拒否。
 const base = createEmptySheet();
 base.nodes.push({ id: 'a', parent: 'n0', kind: 'idea', text: 'A' }, { id: 'b', parent: 'n0', kind: 'idea', text: 'B' }, { id: 'c', parent: 'a', kind: 'idea', text: 'C' });
-base.links.push({ id: 'l', a: 'a', b: 'b', comment: '' });
+base.links.push({ id: 'l', a: 'a', b: 'b', comment: 'A-B' });
 base.groups.push({ id: 'g', members: ['a', 'c'], title: 'G', comment: '', color: '#d4e4f7' });
 for (const proposal of [
   { removes: ['n0'] }, { ghosts: [{ id: 'new', parent: 'missing', text: '不正' }] },
