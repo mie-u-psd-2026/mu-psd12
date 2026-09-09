@@ -193,7 +193,7 @@ def get_state():
     conn = _connect()
     try:
         rows = conn.execute("SELECT key, value FROM app_state").fetchall()
-        return {r['key']: r['value'] for r in rows}
+        return {r['key']: json.loads(r['value']) for r in rows}
     finally:
         conn.close()
 
