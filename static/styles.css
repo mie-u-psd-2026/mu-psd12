@@ -35,13 +35,15 @@
       inset: 0;
       background-image: radial-gradient(var(--mono-300) 1px, transparent 1px);
       background-size: 24px 24px;
+      touch-action: none;
     }
 
     .app-header {
       position: absolute;
       top: 32px;
       left: 32px;
-      z-index: 1;
+      padding: 0 24px 16px 0;
+      z-index: 2;
     }
 
     .app-title {
@@ -52,6 +54,7 @@
 
     .mode-hud {
       margin: 0;
+      padding: 0;
       color: var(--mono-700);
       font-size: 14px;
     }
@@ -60,11 +63,12 @@
       position: absolute;
       top: 32px;
       right: 32px;
-      z-index: 1;
+      width: 336px;
+      z-index: 2;
     }
 
     .sheet-title {
-      width: 320px;
+      width: 100%;
       padding: 8px 0;
       border: none;
       background: transparent;
@@ -83,7 +87,7 @@
       display: flex;
       justify-content: flex-end;
       gap: 8px;
-      margin-top: 16px;
+      margin-top: 8px;
     }
 
     .toolbar-item { position: relative; }
@@ -130,13 +134,13 @@
     .toolbar-item:focus-within .toolbar-hint { opacity: 1; }
 
     .toolbar-status {
-      min-height: 16px;
-      margin: 40px 0 0;
+      min-height: 20px;
+      margin: 32px 0 0;
+      line-height: 1.6;
       text-align: right;
       color: var(--mono-700);
       font-size: 12px;
     }
-    .sheet-canvas { touch-action: none; }
     .sheet-content { position: absolute; left: 50%; top: 50%; transform-origin: 0 0; }
     .sheet-edges { position: absolute; width: 1px; height: 1px; overflow: visible; pointer-events: none; }
     .sheet-edge { stroke: var(--mono-700); stroke-width: 1.5; }
@@ -146,11 +150,13 @@
       border-radius: 16px; background: var(--mono-bg); color: var(--mono-900);
       font: inherit; text-align: center; overflow-wrap: anywhere;
     }
-    .node-button { cursor: pointer; }
-    .theme-node .node-button, .theme-node .node-editor { border-width: 2px; font-weight: 600; }
+    .node-button { cursor: inherit; position: relative; overflow: hidden; }
+    .theme-node { width: 240px; }
+    .theme-node .node-button, .theme-node .node-editor { min-height: 72px; font-size: 18px; border-width: 2px; font-weight: 600; }
     .node-button:focus-visible, .node-editor:focus-visible { outline: 2px solid var(--mono-700); outline-offset: 4px; }
-    .canvas-hint { position: absolute; bottom: 24px; left: 32px; margin: 0;
-      color: var(--mono-700); font-size: 12px; pointer-events: none; }
+    .canvas-hint { position: absolute; bottom: 16px; left: 50%; margin: 0;
+      transform: translateX(-50%); max-width: calc(100vw - 64px); white-space: normal;
+      text-align: center; color: var(--mono-700); font-size: 11px; pointer-events: none; }
 
 /* 共通UI：モノクロ、AIのシアン、グループのパステル。 */
 :root {
@@ -178,24 +184,14 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
 .muted { color: var(--mono-500); font-size: 12px; }
 .ai-accent { color: var(--ai-cyan-dim); }
+.vignette { position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(255,255,255,.78) 100%); }
 .sheet-workspace { position: absolute; inset: 0; }
-/* FIX: 33行目のbackground-imageを重複定義で上書き */
-.sheet-canvas { background-image: radial-gradient(var(--mono-300) .75px, transparent .75px); }
-/* FIX: app-header(44行目)/sheet-header(63行目)のz-indexを重複定義で上書き */
-.app-header, .sheet-header, .left-tools, .right-tools { z-index: 2; }
-.app-header { background: linear-gradient(90deg, white 75%, transparent); padding: 0 24px 16px 0; }
-.mode-hud { padding: 0; font-size: 14px; }
-.sheet-header { width: 336px; }
-/* FIX: 67行目のwidthを重複定義で上書き */
-.sheet-title { width: 100%; }
+.left-tools, .right-tools { z-index: 2; }
 .save-state { display: block; text-align: right; font-size: 11px; color: var(--mono-500); margin-top: 8px; }
-/* FIX: 86行目のmargin-topを重複定義で上書き */
-.sheet-toolbar { margin-top: 8px; }
-/* FIX: 133-134行目のmin-height/margin-topを重複定義で上書き */
-.toolbar-status { line-height: 1.6; margin-top: 32px; min-height: 20px; }
 .error-message { color: #a42b2b; }
 .left-tools, .right-tools { position: absolute; bottom: 56px; width: 248px; }
-.left-tools { left: 32px; }
+.left-tools { left: 32px; width: min(360px, 30vw); }
 .right-tools { right: 32px; }
 .notes-panel { max-height: 24vh; overflow-y: auto; margin-bottom: 32px; }
 .notes-panel details { margin-top: 16px; }
@@ -204,22 +200,20 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .mutter-input label, .model-settings label { display: block; font-size: 12px; margin-bottom: 8px; }
 .mutter-input textarea, .model-settings textarea {
   display: block; width: 100%; resize: vertical; max-height: 120px; min-height: 48px;
-  padding: 8px 0; border: 0; background: rgba(255,255,255,.94); color: var(--mono-900);
+  padding: 8px 0; border: 0; background: transparent; color: var(--mono-900);
   font-size: 13px; line-height: 1.6;
 }
-.mutter-input textarea::placeholder, .model-settings textarea::placeholder { color: var(--mono-500); }
+.mutter-input textarea::placeholder, .model-settings textarea::placeholder { color: var(--mono-700); opacity: 1; }
 .mutter-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
 .mutter-footer small { font-size: 11px; }
 .model-picker { position: relative; margin-bottom: 24px; }
-.model-toggle { padding: 0; width: 100%; text-align: right; }
+.model-toggle { padding: 0; width: 100%; text-align: left; }
 .model-options { position: absolute; bottom: calc(100% + 16px); right: 0; width: 100%;
   max-height: 240px; overflow-y: auto; background: var(--mono-bg); padding: 8px; z-index: 3; }
 .model-options button { display: block; width: 100%; text-align: left; overflow-wrap: anywhere; }
 .model-options p { padding: 8px; font-size: 12px; }
-.model-settings label { text-align: right; }
+.model-settings { text-align: left; }
 .proposal-region { position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%); width: min(400px, 32vw); }
-/* FIX: 152-153行目のleft/bottom/font-sizeを重複定義で上書き */
-.canvas-hint { left: 50%; bottom: 16px; transform: translateX(-50%); white-space: nowrap; font-size: 11px; }
 .sheet-list { background: var(--mono-bg); padding: 24px; max-height: 48vh; overflow-y: auto; }
 .panel-heading { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
 .panel-heading h2 { margin: 0; }
@@ -232,14 +226,14 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .wheel-backdrop { position: fixed; inset: 0; z-index: 10; }
 .radial-wheel { position: absolute; width: 0; height: 0; }
 .wheel-center { position: absolute; transform: translate(-50%, -50%); font-size: 12px; white-space: nowrap;
-  background: rgba(255,255,255,.94); padding: 8px; pointer-events: none; }
+  background: transparent; padding: 8px; pointer-events: none; }
 .wheel-entry { position: absolute; width: 48px; height: 48px; transform: translate(-50%, -50%);
   display: flex; align-items: center; justify-content: center; border: 0; background: transparent;
   color: inherit; cursor: pointer; filter: drop-shadow(0 0 4px white); }
 .wheel-entry:hover, .wheel-entry.is-active { color: var(--mono-900); transform: translate(-50%, -50%) scale(1.15); }
 .ai-accent .wheel-entry:hover, .ai-accent .wheel-entry.is-active { color: var(--ai-cyan-dim); }
 .wheel-label { position: absolute; top: 44px; left: 50%; transform: translateX(-50%);
-  font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; background: white; padding: 4px; }
+  font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; background: transparent; padding: 4px; }
 .wheel-entry:hover .wheel-label, .wheel-entry:focus-visible .wheel-label, .wheel-entry.is-active .wheel-label { opacity: 1; }
 .group-dot { width: 24px; height: 24px; border-radius: 50%; }
 .dialog-backdrop { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(255,255,255,.82); z-index: 20; }
@@ -253,18 +247,17 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 @media (max-height: 680px) { .notes-panel { max-height: 120px; margin-bottom: 16px; } .left-tools, .right-tools { bottom: 48px; } }
 
 /* 編集、削除進捗、AI提案の表示。 */
-.node-button { position: relative; overflow: hidden; }
 .is-selected .node-button { outline: 3px solid var(--mono-700); outline-offset: 5px; }
 .is-holding .node-button::after { content: ''; position: absolute; bottom: 0; left: 0; height: 4px;
-  background: #a42b2b; animation: remove-progress 800ms linear forwards; }
+  background: #a42b2b; animation: remove-progress 600ms linear forwards; }
 @keyframes remove-progress { from { width: 0; } to { width: 100%; } }
 .is-removed { opacity: .5; text-decoration: line-through; }
 .ai-edge { stroke: var(--ai-cyan-dim); stroke-dasharray: 4 4; stroke-width: 2; }
 .ai-group { stroke: var(--ai-cyan-dim); stroke-dasharray: 6 4; stroke-width: 3; }
-.edge-hit { stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: pointer; }
+.edge-hit { stroke: transparent; stroke-width: 16; pointer-events: stroke; cursor: crosshair; }
 .edge-hit:focus-visible { stroke: var(--ai-cyan); stroke-opacity: .3; outline: none; }
 .group-title { fill: var(--mono-700); font-size: 12px; }
-.group-title.can-edit { pointer-events: auto; cursor: pointer; }
+.group-title.can-edit { pointer-events: auto; cursor: crosshair; }
 .edit-panel, .note-editor { position: fixed; z-index: 8; width: 320px; padding: 24px;
   background: var(--mono-bg); box-shadow: 0 8px 40px #0002; max-height: calc(100vh - 48px); overflow-y: auto; }
 .edit-panel label, .note-editor label { display: block; margin-bottom: 16px; font-size: 12px; }
@@ -282,8 +275,7 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .settings-status { font-size: 11px; line-height: 1.6; color: var(--mono-700); }
 .settings-status.error-message { color: #a42b2b; }
 .sheet-list li { display: flex; align-items: center; gap: 8px; }
-/* FIX: white-spaceを重複定義で再上書き（上記canvas-hintのnowrapと競合） */
-.canvas-hint { max-width: calc(100vw - 64px); white-space: normal; text-align: center; }
+
 
 .is-removed .node-button { border-style: dashed; border-color: var(--ai-cyan-dim); }
 .group-list { max-height: 18vh; overflow-y: auto; margin-bottom: 24px; }

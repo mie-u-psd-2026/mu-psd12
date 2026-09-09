@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue';
 import SheetNode from './SheetNode.js';
 import SheetEdge from './SheetEdge.js';
 import SheetGroup from './SheetGroup.js';
-import { MODE_ENTRIES } from '../composables/useWheel.js';
 import { usePhysicsSimulation } from '../composables/usePhysicsSimulation.js';
 // コンポーネントの識別名。
 const name = 'SheetCanvas';
@@ -12,12 +11,10 @@ const props = { sheetState: { type: Object, required: true }, mode: { type: Stri
   proposal: Object, isLocked: Boolean, targetPrompt: { type: String, default: '' } };
 // 親が実行するシート変更と編集画面の要求。
 const emits = ['modeChanged', 'nodeAdded', 'nodeTextChanged', 'nodeRemoved', 'linkAdded',
-  'groupRequested', 'editRequested', 'targetSelected', 'notice'];
-// モード巡回順。
-const MODES = MODE_ENTRIES.map(entry => entry.value);
+  'groupRequested', 'wheelRequested', 'editRequested', 'targetSelected', 'notice'];
 // モードごとの操作説明。
 const HINTS = { view: 'ドラッグで移動', add: 'ノードをクリックして子を追加', edit: 'クリックして文字を編集',
-  remove: '800ms長押しで削除（子は親へつなぎ直します）', join: '始点と終点を選んで接続', group: 'ノードで所属を選択・グループ名で編集' };
+  remove: '600ms長押しで子孫ごと削除', join: '始点と終点を選んで接続', group: 'ノードで所属を選択・グループ名で編集' };
 
 // 描画と入力の状態、操作ハンドラを返す。
 function setup(props, { emit }) {
@@ -28,7 +25,7 @@ function setup(props, { emit }) {
   const pan = ref({ x: 0, y: 0 });
   const zoom = ref(1);
   let drag = null;
-  let lastWheel = -Infinity;
+  const isDragging = ref(false);
   const hint = computed(() => props.targetPrompt || (props.proposal ? 'AI提案を確認してください（破線＝変更・取り消し線＝削除）' : HINTS[props.mode]));
   const nodes = computed(() => props.proposal ? [...props.proposal.result.nodes,
     ...props.sheetState.nodes.filter(node => props.proposal.nodes.removed.includes(node.id))] : props.sheetState.nodes);
@@ -92,14 +89,14 @@ function setup(props, { emit }) {
       zoom.value = scale;
       return;
     }
-    if (props.isLocked || performance.now() - lastWheel < 180) return;
-    lastWheel = performance.now();
-    emit('modeChanged', MODES[(MODES.indexOf(props.mode) + Math.sign(event.deltaY) + MODES.length) % MODES.length]);
+    if (props.isLocked) return;
+    emit('wheelRequested', event);
   }
   // ビューモードまたは提案確認中にドラッグ移動を開始する。
   function handlePointerDown(event) {
     if ((props.mode !== 'view' && !props.proposal) || event.button !== 0 || event.target.closest('input, textarea')) return;
     if (props.targetPrompt && event.target.closest('[data-node-id]')) return;
+    isDragging.value = true;
     drag = { x: event.clientX - pan.value.x, y: event.clientY - pan.value.y };
     event.currentTarget.setPointerCapture?.(event.pointerId);
   }
@@ -109,13 +106,13 @@ function setup(props, { emit }) {
     pan.value = { x: event.clientX - drag.x, y: event.clientY - drag.y };
   }
   // ドラッグを終了する。
-  function handlePointerEnd() { drag = null; }
-  return { editingId, joinStart, positions, nodes, links, groups, edges, pan, zoom, hint, isRunning: physics.isRunning,
+  function handlePointerEnd() { drag = null; isDragging.value = false; }
+  return { isDragging, editingId, joinStart, positions, nodes, links, groups, edges, pan, zoom, hint, isRunning: physics.isRunning,
     handleSelected, handleRemoved, handleHolding, handleSize, handleTextCommitted, handleEditCancelled,
     handleLinkEdit, handleGroupEdit, handleEscape, handleWheel, handlePointerDown, handlePointerMove, handlePointerEnd };
 }
 // 提案中も元のシートを保持し、結果と削除予定の要素を重ねて表示する。
-const template = `<section class="sheet-canvas" aria-label="ブレストシート" @contextmenu.prevent
+const template = `<section class="sheet-canvas" aria-label="ブレストシート" :style="{ cursor: mode === 'view' ? (isDragging ? 'grabbing' : 'grab') : 'crosshair', backgroundSize: (24 * zoom) + 'px ' + (24 * zoom) + 'px', backgroundPosition: 'calc(50% + ' + pan.x + 'px) calc(50% + ' + pan.y + 'px)' }" @contextmenu.prevent
   @wheel.prevent="handleWheel" @pointerdown="handlePointerDown" @pointermove="handlePointerMove"
   @pointerup="handlePointerEnd" @pointercancel="handlePointerEnd" @lostpointercapture="handlePointerEnd" @keydown.esc="handleEscape">
   <div class="sheet-content" :style="{ transform: 'translate(' + pan.x + 'px,' + pan.y + 'px) scale(' + zoom + ')' }">

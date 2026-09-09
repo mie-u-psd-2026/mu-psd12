@@ -24,8 +24,8 @@
 仕様書の `{title,ops,ghosts,removes,links,group,note,merge}` を受け取ります。
 
 - `ops`: 表示用の説明文字列配列。**LLMのパイプ記法はフロントで解析しません**。
-- `ghosts`: `{id,parent,text}` の配列。新しいIDは実IDへ変換し、親・リンク・グループ参照にも反映。既存IDの場合はテキストと親の更新提案。
-- `removes`: 削除予定のノードID配列。通常の削除は子を親へつなぎ直します。
+- `ghosts`: `{id,parent,text}` の配列。新しいノードIDは `n{連番}` の実IDへ変換し、親・リンク・グループ参照にも反映。既存IDの場合はテキストと親の更新提案。
+- `removes`: 削除予定のノードID配列。通常の削除は子孫もまとめて削除し、接続・グループ所属からも除外します。
 - `links`: `{id?,a,b,comment?}`。既存IDならコメントや端点の更新、新規なら追加。
 - `group`: `{id?,members,title,comment?,color?}`。既存IDなら更新。所属の重複は既存グループから移して解消。
 - `note`: `{title,body}`。新しいノートとして提案。

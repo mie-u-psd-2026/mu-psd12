@@ -29,7 +29,7 @@ export function usePhysicsSimulation(readSheet) {
   // 一定速度以下への収束まで計算し、長時間の暴走時も停止する。
   function tick() {
     if (isPaused) return;
-    const result = stepPhysics(bodies, edges);
+    const result = stepPhysics(bodies, edges, readSheet().groups);
     stableFrames = result.speed < .08 && result.overlap < 1 ? stableFrames + 1 : 0;
     ticks++;
     publish();
@@ -49,8 +49,8 @@ export function usePhysicsSimulation(readSheet) {
       return { id: node.id, isRoot: node.parent === null,
         x: prior?.x ?? parent.x + Math.cos(angle) * 240,
         y: prior?.y ?? parent.y + Math.sin(angle) * 240,
-        vx: 0, vy: 0, width: dimensions.get(node.id)?.width || 192,
-        height: dimensions.get(node.id)?.height || 56 };
+        vx: 0, vy: 0, width: dimensions.get(node.id)?.width || (node.parent === null ? 240 : 192),
+        height: dimensions.get(node.id)?.height || (node.parent === null ? 72 : 56) };
     });
     bodies.forEach(body => { if (body.isRoot) { body.x = 0; body.y = 0; } });
     edges = sheet.nodes.filter(node => node.parent !== null).map(node => ({ a: node.parent, b: node.id }))
@@ -80,7 +80,7 @@ export function usePhysicsSimulation(readSheet) {
 
   watch(() => {
     const sheet = readSheet();
-    return JSON.stringify([sheet.nodes.map(node => [node.id, node.parent]), sheet.links.map(link => [link.id, link.a, link.b])]);
+    return JSON.stringify([sheet.nodes.map(node => [node.id, node.parent]), sheet.links.map(link => [link.id, link.a, link.b]), sheet.groups.map(group => group.members)]);
   }, restart, { immediate: true });
   onBeforeUnmount(stop);
   return { positions, isRunning, resize, pause, restart, stop };

@@ -1,6 +1,6 @@
 // シート本体を保持し、ノードの追加とテキスト更新を提供する。
 import { reactive } from 'vue';
-import { createEmptySheet } from '../utils/sheet_format.js';
+import { createEmptySheet, nextNodeId } from '../utils/sheet_format.js';
 
 // 初期シートと、木構造を維持する編集関数を返す。
 export function useSheetState() {
@@ -10,7 +10,7 @@ export function useSheetState() {
   function addNode(parentId) {
     if (!sheetState.nodes.some(node => node.id === parentId)) return null;
 
-    const id = crypto.randomUUID();
+    const id = nextNodeId(sheetState.nodes);
     sheetState.nodes.push({ id, kind: 'idea', text: '新しいアイデア', parent: parentId });
     return id;
   }
