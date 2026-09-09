@@ -89,10 +89,11 @@ assert.equal(ids.length, 3, '孫ノードが追加される');
 const grandchildId = ids.find(id => id !== 'n0' && id !== childId);
 log('ノード追加（子・孫）');
 
-// ノード削除（800ms長押し、短いクリックでは削除しないこと、Undo）
+// ノード削除（600ms長押し、短い長押しでは削除しないこと、サブツリーごと削除、Undo）
+// design-document.md 4.1: 削除対象に子孫ノードがある場合は子孫ノードも全て共に削除する。
 await switchMode(page, 'ノード削除');
-const grandchildButton = page.locator(`[data-node-id="${grandchildId}"] .node-button`);
-const box = await grandchildButton.boundingBox();
+const childButton = page.locator(`[data-node-id="${childId}"] .node-button`);
+const box = await childButton.boundingBox();
 await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 await page.mouse.down();
 await page.waitForTimeout(200);
@@ -101,14 +102,110 @@ await page.waitForTimeout(50);
 assert.equal((await nodeIds(page)).length, 3, '短い長押しでは削除しない');
 await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
 await page.mouse.down();
-await page.waitForTimeout(850);
+await page.waitForTimeout(620);
 await page.mouse.up();
 await page.waitForTimeout(50);
-assert.equal((await nodeIds(page)).length, 2, '800ms長押しで削除される');
+const idsAfterDelete = await nodeIds(page);
+assert.equal(idsAfterDelete.length, 1, '600ms長押しで子孫ノードもサブツリーごと削除される');
+assert(!idsAfterDelete.includes(grandchildId), '孫ノードも削除されている');
 await page.getByRole('button', { name: '元に戻す', exact: true }).click();
 await page.waitForTimeout(50);
-assert.equal((await nodeIds(page)).length, 3, 'Undoで復元される');
-log('ノード削除（800ms長押し・取消・Undo）');
+assert.equal((await nodeIds(page)).length, 3, 'Undoでサブツリーごと復元される');
+log('ノード削除（600ms長押し・取消・サブツリー削除・Undo）');
+
+// モード別カーソル（design-document.md 6.4: view=grab、それ以外=crosshair）。
+// jsdomは実CSSを適用しないため、実ブラウザでのみ意味のある検証。
+await switchMode(page, 'ビュー');
+assert.equal(
+  await page.locator('.sheet-canvas').evaluate(el => getComputedStyle(el).cursor),
+  'grab',
+  'viewモードはgrabカーソル',
+);
+await switchMode(page, 'ノード追加');
+assert.equal(
+  await page.locator('.sheet-canvas').evaluate(el => getComputedStyle(el).cursor),
+  'crosshair',
+  'view以外は十字カーソル',
+);
+await switchMode(page, 'ビュー');
+log('モード別カーソル表示');
+
+// ビネット効果（design-document.md 6.2）。実際に描画され視認可能な状態であることを確認する。
+// 実装のクラス名は仮定（.vignette）。実装に合わせて調整すること。
+{
+  const vignette = page.locator('.vignette');
+  assert.equal(await vignette.count(), 1, 'ビネット要素が存在する');
+  assert(await vignette.isVisible(), 'ビネット要素が表示されている');
+  log('ビネット効果の表示');
+}
+
+// マウスホイール操作でのモードホイール表示（design-document.md 4.1）。実wheelイベントで検証する。
+{
+  const canvasBox = await page.locator('.sheet-canvas').boundingBox();
+  await page.mouse.move(canvasBox.x + canvasBox.width / 2, canvasBox.y + canvasBox.height / 2);
+  await page.mouse.wheel(0, 100);
+  await page.waitForTimeout(50);
+  assert.equal(await page.locator('.radial-wheel').count(), 1, 'マウスホイール操作でモードホイールが表示される');
+  // ホイールを閉じて後続のテストに影響しないようにする。
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(50);
+  log('マウスホイールでのモードホイール表示');
+}
+
+// 右クリック長押しからモードホイール表示までの即時性（design-document.md 4.1）。実時間で計測する。
+{
+  const canvasBox = await page.locator('.sheet-canvas').boundingBox();
+  const x = canvasBox.x + canvasBox.width / 2;
+  const y = canvasBox.y + canvasBox.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down({ button: 'right' });
+  await page.waitForTimeout(60);
+  assert.equal(await page.locator('.radial-wheel').count(), 1, '右クリック長押しから短時間でモードホイールが表示される');
+  await page.mouse.up({ button: 'right' });
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(50);
+  log('右クリック長押しの即時表示');
+}
+
+// メインテーマノードの拡大表示（design-document.md 6.4）。
+// テキスト量の差によるサイズ差を排除するため、両ノードを同じテキストに揃えてから比較する。
+{
+  await switchMode(page, 'ノード編集');
+  await page.locator('[data-node-id="n0"] .node-button').click();
+  await page.locator('[data-node-id="n0"] .node-editor').fill('同一テキスト');
+  await page.locator('[data-node-id="n0"] .node-editor').press('Enter');
+  await page.waitForTimeout(50);
+  await page.locator(`[data-node-id="${grandchildId}"] .node-button`).click();
+  await page.locator(`[data-node-id="${grandchildId}"] .node-editor`).fill('同一テキスト');
+  await page.locator(`[data-node-id="${grandchildId}"] .node-editor`).press('Enter');
+  await page.waitForTimeout(50);
+  const themeBox = await page.locator('[data-node-id="n0"] .node-button').boundingBox();
+  const ideaBox = await page.locator(`[data-node-id="${grandchildId}"] .node-button`).boundingBox();
+  assert(themeBox.width > ideaBox.width || themeBox.height > ideaBox.height,
+    '同じテキストでもテーマノードは通常ノードより大きい');
+  await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+  await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+  await page.waitForTimeout(50);
+  log('メインテーマノードの拡大表示');
+}
+
+// 未保存の変更がある状態での「新規」操作は確認ダイアログを必ず表示する（design-document.md 4.8）。
+{
+  await page.locator('.sheet-title').fill('未保存の確認用タイトル');
+  await page.locator('.sheet-title').press('Enter');
+  await page.waitForTimeout(50);
+  await page.getByRole('button', { name: '新規', exact: true }).click();
+  await page.waitForTimeout(100);
+  assert.equal(await page.locator('.discard-panel').count(), 1, '未保存の変更がある場合は確認ダイアログが表示される');
+  await page.locator('.discard-panel').getByRole('button', { name: 'キャンセル', exact: true }).click();
+  await page.waitForTimeout(50);
+  assert.equal(await titleInput.inputValue(), '未保存の確認用タイトル', 'キャンセルで編集内容が保持される');
+  // 後続のテストに影響しないよう、タイトルを元に戻しておく。
+  await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+  await page.waitForTimeout(50);
+  assert.equal(await titleInput.inputValue(), 'E2E確認シート');
+  log('未保存確認ダイアログの表示');
+}
 
 // ノード接続（作成・コメント編集・削除・Undo）
 await switchMode(page, 'ノード接続');
