@@ -56,7 +56,8 @@ class ConfigTest(unittest.TestCase):
         self.assertEqual(values['FLASK_HOST'], '0.0.0.0')
         self.assertEqual(values['FLASK_PORT'], 5000)
         self.assertIs(values['FLASK_DEBUG'], True)
-        self.assertEqual(values['STORAGE_DIR'], '/storage')
+        self.assertEqual(values['STORAGE_DIR'],
+                          str(Path(config.__file__).resolve().parent.parent / 'storage'))
         self.assertEqual(values['OLLAMA_BASE_URL'], 'http://localhost:11434/v1')
         self.assertEqual(values['OLLAMA_API_KEY'], 'ollama')
         self.assertEqual(values['LLM_TIMEOUT'], 120)
