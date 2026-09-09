@@ -12,10 +12,10 @@ function setup(props, { emit }) {
   return { handleEdit };
 }
 // メンバー0件のグループも削除・名称変更できる一覧。
-const template = `<section class="group-list" aria-label="グループ一覧"><h2>グループ</h2>
-  <p v-if="!groups.length" class="muted">ノードを選んで作成できます</p>
+const template = `<section class="group-list" aria-label="Group List"><h2>Group</h2>
+  <p v-if="!groups.length" class="muted">Select any node to create group.</p>
   <button v-for="group in groups" :key="group.id" type="button" class="text-button" :disabled="isLocked"
-    :aria-label="'グループ一覧から編集：' + group.title" @click="handleEdit(group, $event)">
-    <span class="group-dot" :style="{ backgroundColor: group.color }"></span>{{ group.title }}（{{ group.members.length }}）</button>
+    :aria-label="'Edit from group list: ' + group.title" @click="handleEdit(group, $event)">
+    <span class="group-dot" :style="{ backgroundColor: group.color }"></span>{{ group.title }} ({{ group.members.length }})</button>
 </section>`;
 export default { name, props, emits, setup, template };

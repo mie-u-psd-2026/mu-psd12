@@ -17,7 +17,7 @@ const template = `<g v-if="from && to">
   <line :x1="from.x" :y1="from.y" :x2="to.x" :y2="to.y" class="sheet-edge"
     :class="{ 'is-indirect': type === 'indirect', 'ai-edge': isChanged || isRemoved, 'is-removed': isRemoved }" />
   <line v-if="canEdit" :x1="from.x" :y1="from.y" :x2="to.x" :y2="to.y" class="edge-hit"
-    role="button" tabindex="0" :aria-label="'接続を編集：' + (link.comment || 'コメントなし')"
-    @click.stop="handleEdit" @keydown.enter.prevent="handleEdit"><title>{{ link.comment || '接続を編集' }}</title></line>
+    role="button" tabindex="0" :aria-label="'Edit link: ' + (link.comment || 'no comment')"
+    @click.stop="handleEdit" @keydown.enter.prevent="handleEdit"><title>{{ link.comment || 'Edit link' }}</title></line>
 </g>`;
 export default { name, props, emits, setup, template };

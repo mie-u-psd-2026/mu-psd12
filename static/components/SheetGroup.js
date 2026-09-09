@@ -25,7 +25,7 @@ function setup(props, { emit }) {
 const template = `<g v-if="bounds" :class="{ 'is-removed': isRemoved }">
   <rect v-bind="bounds" rx="32" :fill="group.color" class="sheet-group" :class="{ 'ai-group': isChanged || isRemoved }" />
   <text :x="bounds.x + 16" :y="bounds.y - 8" class="group-title" :class="{ 'can-edit': canEdit }"
-    :role="canEdit ? 'button' : null" :tabindex="canEdit ? 0 : null" :aria-label="'グループを編集：' + group.title"
+    :role="canEdit ? 'button' : null" :tabindex="canEdit ? 0 : null" :aria-label="'Edit group: ' + group.title"
     @click.stop="handleEdit" @keydown.enter.prevent="handleEdit">{{ group.title }}<title>{{ group.comment }}</title></text>
 </g>`;
 export default { name, props, emits, setup, template };

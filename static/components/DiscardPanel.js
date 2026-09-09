@@ -3,7 +3,7 @@ import { ref, onMounted, onBeforeUnmount } from 'vue';
 // コンポーネントの識別名。
 const name = 'DiscardPanel';
 // 続行する操作の名前。
-const props = { label: { type: String, required: true }, title: { type: String, default: '未保存の変更があります' },
+const props = { label: { type: String, required: true }, title: { type: String, default: 'You have unsaved changes' },
   message: { type: String, default: '' } };
 // 続行とキャンセル。
 const emits = ['confirm', 'cancel'];
@@ -31,8 +31,8 @@ function setup(props, { emit }) {
 // ネイティブダイアログを使わない確認表示。
 const template = `<div class="dialog-backdrop"><section ref="dialog" class="discard-panel"
   role="dialog" aria-modal="true" aria-labelledby="discard-title" @keydown="handleKeydown">
-  <h2 id="discard-title">{{ title }}</h2><p>{{ message || '変更を破棄して「' + label + '」を続けますか？' }}</p>
-  <div class="dialog-actions"><button type="button" class="text-button" @click="handleCancel">キャンセル</button>
-    <button type="button" class="text-button" @click="handleConfirm">続ける</button></div>
+  <h2 id="discard-title">{{ title }}</h2><p>{{ message || 'Discard changes and continue with "' + label + '"?' }}</p>
+  <div class="dialog-actions"><button type="button" class="text-button" @click="handleCancel">Cancel</button>
+    <button type="button" class="text-button" @click="handleConfirm">Continue</button></div>
 </section></div>`;
 export default { name, props, emits, setup, template };

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AIサポート付きブレストアプリ</title>
+  <title>AI-Supported Brainstorm App</title>
   <script type="importmap">
     {
       "imports": {
@@ -15,8 +15,8 @@
   <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-  <div id="app"><p class="boot-message" role="status">画面を読み込んでいます…</p></div>
-  <noscript>このアプリを使用するにはJavaScriptを有効にしてください。</noscript>
+  <div id="app"><p class="boot-message" role="status">Loading…</p></div>
+  <noscript>Please enable JavaScript to use this app.</noscript>
   <script type="module">
     try {
       const [{ createApp }, { default: AppRoot }] = await Promise.all([
@@ -24,7 +24,7 @@
       ]);
       createApp(AppRoot).mount('#app');
     } catch (error) {
-      document.querySelector('#app').textContent = '画面を読み込めませんでした。サーバー経由で開いていることと、インターネット接続を確認して再読み込みしてください。';
+      document.querySelector('#app').textContent = 'Failed to load the page. Please make sure it is opened via the server, check your internet connection, and reload.';
       console.error(error);
     }
   </script>

@@ -126,45 +126,52 @@ FE/BE
   - [x] BE: `GET /models`: レスポンスを`{data:[{id}]}`形式に変更
   - [x] BE: `POST /ai`: `target_node_id`の空文字列判定バグ修正（`is None`判定に）
   - [x] FE: 上記API形式に呼び出し・レスポンス処理を合わせ、対応するフロントエンドテストを確認する
-  - [x] BE: `GET /state`の値のJSON二重エンコードを解消する（`get_state()`に`json.loads()`を追加。FE変更不要）★
-
-> 9/9: BEの上記7項目を実装し、バックエンド既存テスト25件がPASS。FE対応は完了。状態値の二重エンコード解消も完了（`test_state_api`/`test_state_merge`を含むバックエンド全32テストがPASS）。
+  - [x] BE: `GET /state`の値のJSON二重エンコードを解消する（`get_state()`に`json.loads()`を追加。FE変更不要）
+  - [x] BE: AIノート生成モード（4.6・8.2`note`）が未実装
+  - [x] BE: システムプロンプトの`L+`が`newId|nodeA|nodeB|comment`（4フィールド）で、design-document.md 8.1.2記載の`L+|a|b|comment`（3フィールド）と不一致
+  - [x] BE: ひとりごとメモ（4.7）のAI連携が未実装。`/ai`が`text`を受け取らず、`ai_service`にも`mutter`モードの指示・プロンプトへの本文組込が無いため、ユーザーの入力がAIに渡らない
+  - [ ] BE: AI機能ごとにAIが生成する操作を制限
 
 FE  
 
-- [x] `static/styles.css`のCSSクラスのクリーニング（FE）
-  - [x] `.sheet-canvas`: 背景ドット重複定義（33/182行目、コントラストも低下）
-  - [x] `.app-header`: z-index重複定義（44/183行目）
-  - [x] `.sheet-header`: z-index重複定義（63/183行目）
-  - [x] `.sheet-title`: width重複定義（67/187行目）
-  - [x] `.sheet-toolbar`: margin-top重複定義（86/189行目）
-  - [x] `.toolbar-status`: min-height/margin-top重複定義（133-134/190行目）
-  - [x] `.canvas-hint`: left/bottom/font-size/white-spaceが3箇所で重複定義（152-153/216/279行目）
+- [x] `static/styles.css`のCSSクラスのクリーニング
+  - [x] `.sheet-canvas`: 背景ドット重複定義
+  - [x] `.app-header`: z-index重複定義
+  - [x] `.sheet-header`: z-index重複定義
+  - [x] `.sheet-title`: width重複定義
+  - [x] `.sheet-toolbar`: margin-top重複定義
+  - [x] `.toolbar-status`: min-height/margin-top重複定義
+  - [x] `.canvas-hint`: left/bottom/font-size/white-spaceが3箇所で重複定義
 - [x] モード操作関連
-  - [x] マウスホイール操作時に、モードホイールが表示されない★
-  - [x] モードに対応するカーソル表示になっていない★
-  - [x] 右クリック長押し→モードホイール表示までの遅延をほぼ即時にする（体感できない程度。design-document.md 4.1参照）★
+  - [x] マウスホイール操作時に、モードホイールが表示されない
+  - [x] モードに対応するカーソル表示になっていない
+  - [x] 右クリック長押し→モードホイール表示までの遅延をほぼ即時にする
   - [x] マウスホイール操作・右クリック長押しが競合した場合、後から開始した方へ即座に主導権を移すロジックを実装（design-document.md 4.1参照）
   - [x] モードホイールの文字要素の背景が透明でない
-- [x] メインテーマノードが通常ノードと同じ大きさ（大きくする）★
+- [x] メインテーマノードが通常ノードと同じ大きさ（大きくする）
 - [x] 背景のドットが移動しない
-- [x] 画面全体のビネット効果が無い★（CSSのみで実装可。`AppRoot.js`に`<div class="vignette">`を追加し`styles.css`に`radial-gradient`を定義する想定。新規コンポーネント不要）
+- [x] 画面全体のビネット効果が無い（CSSのみで実装可）
 - [x] ヘッダ背景が透明でない
 - [x] 右下AI設定項目内で要素が右詰めになっている（左詰めにする）
 - [x] 左下ひとりごとメモ項目の横幅が狭い（大きめに取る）
 - [x] ひとりごとメモ・システムプロンプトのカードの背景（透明にする。代わりにプレースホルダー文字を1段階濃くして強調）
-- [x] 同グループ同士のノードはより引き合い、無所属を含む異なるグループ同士のノードは離れ合うようにする★（`stepPhysics(bodies, edges, groups)`の第3引数として実装想定）
-- [ ] 引力と斥力の調整
-- [x] ノード削除を子孫ごとの削除に変更（UI操作・AI提案`removes`の両方。design-document.md 4.1参照）★
-- [x] 削除を 600ms に修正★
-- [x] ノードID生成を`crypto.randomUUID()`から`n{連番}`形式の増分IDに変更（`useSheetState.js`。UUID参照がLLMプロンプトの過半のトークンを浪費し誤参照リスクも高いため）
-
-> 9/9: FE実装完了を確認。tests/frontend 22件全PASS、tests/e2e 17件全PASS・SKIP 0件（保存バグ解消によりSKIPも解消）。テスト側の不具合2件も合わせて修正（カスケード削除に伴う旧テストの矛盾、新規テストブロックのapp.unmount後誤配置）。「引力と斥力の調整」のみ数値調整のため未チェック。
+- [x] 同グループ同士のノードはより引き合い、無所属を含む異なるグループ同士のノードは離れ合うようにする（`stepPhysics(bodies, edges, groups)`の第3引数として実装想定）
+- [x] 引力と斥力の調整
+- [x] ノード削除を子孫ごとの削除に変更（UI操作・AI提案`removes`の両方。design-document.md 4.1参照）
+- [x] 削除を 600ms に修正
+- [x] ノードID生成を`crypto.randomUUID()`から`n{連番}`形式の増分IDに変更
+- [ ] エッジのコメント表示・編集機能が未実装
+- [ ] CSS:user-select で意図しないテキスト選択の防止
+- [ ] ショートカットホイールの各選択領域に背景を追加（白・グロウ・円形）
+- [x] AIホイールの`value`（related/perspective/summary）がBEの`mode`名（expand/newview/note）と不一致
+- [ ] インタラクト可能な文字列に常時下線表示
+- [x] UIラベルを全て英語表記に統一（テンプレート文言・aria-label・エラーメッセージ・index.html）
 
 BE  
 
 - [x] 定数ハードコードを、`python-dotenv` で `.env` から注入するよう変更
 - [x] 組込のシステムプロンプト（`ai_service.py`の`_SYSTEM_BASE`/`_build_prompt`/モード別指示）テスト追加
+- [x] LLM応答をストリーミングでサーバーコンソールに逐次出力するデバッグ機能追加
 　　
 ### コードフリーズ (9/10 ALL)
 

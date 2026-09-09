@@ -17,11 +17,11 @@ function setup(props, { emit }) {
   return { handleCreate, handleEdit, handleDelete };
 }
 // 本文を展開して読めるノート一覧。
-const template = `<section class="notes-panel" aria-label="ノート"><div class="panel-heading"><h2>ノート</h2>
-  <button type="button" class="icon-button" aria-label="ノートを追加" :disabled="isLocked" @click="handleCreate"><app-icon icon="plus" label="追加"></app-icon></button></div>
-  <p v-if="!notes.length" class="muted">ノートはまだありません</p>
+const template = `<section class="notes-panel" aria-label="Notes"><div class="panel-heading"><h2>Note</h2>
+  <button type="button" class="icon-button" aria-label="Add Note" :disabled="isLocked" @click="handleCreate"><app-icon icon="plus" label="Add"></app-icon></button></div>
+  <p v-if="!notes.length" class="muted">No Notes are here.</p>
   <details v-for="note in notes" :key="note.id"><summary>{{ note.title }}</summary><p class="note-body">{{ note.body }}</p>
-    <button type="button" class="icon-button" :aria-label="'ノートを編集：' + note.title" :disabled="isLocked" @click="handleEdit(note)"><app-icon icon="edit-3" label="編集"></app-icon></button>
-    <button type="button" class="icon-button" :aria-label="'ノートを削除：' + note.title" :disabled="isLocked" @click="handleDelete(note.id)"><app-icon icon="trash-2" label="削除"></app-icon></button>
+    <button type="button" class="icon-button" :aria-label="'Edit note: ' + note.title" :disabled="isLocked" @click="handleEdit(note)"><app-icon icon="edit-3" label="Edit"></app-icon></button>
+    <button type="button" class="icon-button" :aria-label="'Delete note: ' + note.title" :disabled="isLocked" @click="handleDelete(note.id)"><app-icon icon="trash-2" label="Delete"></app-icon></button>
   </details></section>`;
 export default { name, props, emits, components: { AppIcon }, setup, template };

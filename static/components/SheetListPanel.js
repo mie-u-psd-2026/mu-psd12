@@ -12,7 +12,7 @@ function setup(props, { emit }) {
   // 更新日時を受け取り、日本語表示または未取得表示を返す。
   function formatDate(value) {
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? '更新日時なし' : date.toLocaleString('ja-JP');
+    return Number.isNaN(date.getTime()) ? 'No update time' : date.toLocaleString('en-US');
   }
   // 選択されたシートIDを親へ通知する。
   function handleSelect(id) { emit('select', id); }
@@ -28,16 +28,16 @@ function setup(props, { emit }) {
 }
 // フォーカス移動でも利用できるシート一覧。
 const template = `
-  <section class="sheet-list" aria-label="保存済みシート" @keydown.esc.stop="handleClose">
-    <div class="panel-heading"><h2>保存済みシート</h2>
-      <button type="button" class="icon-button" aria-label="一覧を閉じる" @click="handleClose"><app-icon icon="x" label="閉じる"></app-icon></button></div>
-    <p v-if="isBusy">読み込み中…</p>
-    <p v-else-if="hasError">一覧を取得できませんでした。<button type="button" class="text-button" @click="handleRetry">再試行</button></p>
-    <p v-else-if="!sheets.length">保存済みシートはありません。</p>
+  <section class="sheet-list" aria-label="Saved Sheets" @keydown.esc.stop="handleClose">
+    <div class="panel-heading"><h2>Saved Sheets</h2>
+      <button type="button" class="icon-button" aria-label="Close list" @click="handleClose"><app-icon icon="x" label="Close"></app-icon></button></div>
+    <p v-if="isBusy">Loading…</p>
+    <p v-else-if="hasError">Failed to load lists.<button type="button" class="text-button" @click="handleRetry">Retry</button></p>
+    <p v-else-if="!sheets.length">No Sheets are here now.</p>
     <ul v-else><li v-for="sheet in sheets" :key="sheet.id">
       <button type="button" class="sheet-list-entry" :disabled="isBusy" @click="handleSelect(sheet.id)">
         <strong>{{ sheet.title }}</strong><time>{{ formatDate(sheet.updated_at) }}</time>
-      </button><button type="button" class="icon-button" :aria-label="'シートを削除：' + sheet.title" :disabled="isBusy" @click="handleDelete(sheet.id)"><app-icon icon="trash-2" label="削除"></app-icon></button></li></ul>
-    <button type="button" class="text-button" :disabled="isBusy" @click="handleCreate">新規シートを作成</button>
+      </button><button type="button" class="icon-button" :aria-label="'Delete sheet: ' + sheet.title" :disabled="isBusy" @click="handleDelete(sheet.id)"><app-icon icon="trash-2" label="Delete"></app-icon></button></li></ul>
+    <button type="button" class="text-button" :disabled="isBusy" @click="handleCreate">Create New Sheet</button>
   </section>`;
 export default { name, props, emits, components: { AppIcon }, setup, template };

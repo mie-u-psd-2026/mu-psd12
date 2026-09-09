@@ -2,26 +2,26 @@
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 // モードの巡回順と表示情報。
 export const MODE_ENTRIES = [
-  { value: 'view', label: 'ビュー', icon: 'move' },
-  { value: 'add', label: 'ノード追加', icon: 'plus' },
-  { value: 'remove', label: 'ノード削除', icon: 'trash-2' },
-  { value: 'edit', label: 'ノード編集', icon: 'edit-3' },
-  { value: 'join', label: 'ノード接続', icon: 'link' },
-  { value: 'group', label: 'グループ化', icon: 'layers' },
+  { value: 'view', label: 'View', icon: 'move' },
+  { value: 'add', label: 'Add Node', icon: 'plus' },
+  { value: 'remove', label: 'Delete Node', icon: 'trash-2' },
+  { value: 'edit', label: 'Edit Node', icon: 'edit-3' },
+  { value: 'join', label: 'Join Node', icon: 'link' },
+  { value: 'group', label: 'Group Node', icon: 'layers' },
 ];
-// AI機能のショートカット。実行処理は親へ委譲する。
+// AI機能のショートカット。実行処理は親へ委譲する。valueはバックエンドのmode名と一致させる。
 const AI_ENTRIES = [
-  { value: 'related', label: '関連アイデア', icon: 'git-branch' },
-  { value: 'perspective', label: '新しい視点', icon: 'sun' },
-  { value: 'link', label: '関連付け', icon: 'link' },
-  { value: 'merge', label: 'ノード統合', icon: 'minimize-2' },
-  { value: 'group', label: 'グループ化', icon: 'layers' },
-  { value: 'summary', label: 'ノートに要約', icon: 'file-text' },
+  { value: 'expand', label: 'Expand', icon: 'git-branch' },
+  { value: 'newview', label: 'Newview', icon: 'sun' },
+  { value: 'link', label: 'Link', icon: 'link' },
+  { value: 'merge', label: 'Merge', icon: 'minimize-2' },
+  { value: 'group', label: 'Group', icon: 'layers' },
+  { value: 'note', label: 'Summary', icon: 'file-text' },
 ];
 // スクロール終了後の表示時間。
 const SCROLL_DELAY = 650;
 // 連続スクロールで選択を進める最小間隔。
-const SCROLL_INTERVAL = 180;
+const SCROLL_INTERVAL = 80;
 
 // 汎用の開閉・選択処理と、マウス操作のハンドラを返す。
 export function useWheel(readMode = () => 'view') {

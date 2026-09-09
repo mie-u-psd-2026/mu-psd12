@@ -13,8 +13,8 @@ const props = { sheetState: { type: Object, required: true }, mode: { type: Stri
 const emits = ['modeChanged', 'nodeAdded', 'nodeTextChanged', 'nodeRemoved', 'linkAdded',
   'groupRequested', 'wheelRequested', 'editRequested', 'targetSelected', 'notice'];
 // モードごとの操作説明。
-const HINTS = { view: 'ドラッグで移動', add: 'ノードをクリックして子を追加', edit: 'クリックして文字を編集',
-  remove: '600ms長押しで子孫ごと削除', join: '始点と終点を選んで接続', group: 'ノードで所属を選択・グループ名で編集' };
+const HINTS = { view: 'Drag to pan', add: 'Click a node to add a child', edit: 'Click to edit text',
+  remove: 'Hold 600ms to delete with descendants', join: 'Select a start and end node to connect', group: 'Click a node to choose membership, or a group name to edit' };
 
 // 描画と入力の状態、操作ハンドラを返す。
 function setup(props, { emit }) {
@@ -26,7 +26,7 @@ function setup(props, { emit }) {
   const zoom = ref(1);
   let drag = null;
   const isDragging = ref(false);
-  const hint = computed(() => props.targetPrompt || (props.proposal ? 'AI提案を確認してください（破線＝変更・取り消し線＝削除）' : HINTS[props.mode]));
+  const hint = computed(() => props.targetPrompt || (props.proposal ? 'Review the AI proposal (dashed = change, strikethrough = delete)' : HINTS[props.mode]));
   const nodes = computed(() => props.proposal ? [...props.proposal.result.nodes,
     ...props.sheetState.nodes.filter(node => props.proposal.nodes.removed.includes(node.id))] : props.sheetState.nodes);
   const links = computed(() => props.proposal ? [...props.proposal.result.links,
@@ -54,7 +54,7 @@ function setup(props, { emit }) {
     if (props.targetPrompt) { emit('targetSelected', id); return; }
     if (props.mode === 'add') emit('nodeAdded', id);
     if (props.mode === 'edit') editingId.value = id;
-    if (props.mode === 'remove' && props.sheetState.nodes.find(node => node.id === id)?.parent === null) emit('notice', 'テーマノードは削除できません。');
+    if (props.mode === 'remove' && props.sheetState.nodes.find(node => node.id === id)?.parent === null) emit('notice', 'The theme node cannot be deleted.');
     if (props.mode === 'group') emit('groupRequested', id, event);
     if (props.mode !== 'join') return;
     if (!joinStart.value) { joinStart.value = id; return; }
@@ -112,7 +112,7 @@ function setup(props, { emit }) {
     handleLinkEdit, handleGroupEdit, handleEscape, handleWheel, handlePointerDown, handlePointerMove, handlePointerEnd };
 }
 // 提案中も元のシートを保持し、結果と削除予定の要素を重ねて表示する。
-const template = `<section class="sheet-canvas" aria-label="ブレストシート" :style="{ cursor: mode === 'view' ? (isDragging ? 'grabbing' : 'grab') : 'crosshair', backgroundSize: (24 * zoom) + 'px ' + (24 * zoom) + 'px', backgroundPosition: 'calc(50% + ' + pan.x + 'px) calc(50% + ' + pan.y + 'px)' }" @contextmenu.prevent
+const template = `<section class="sheet-canvas" aria-label="Brainstorm Sheet" :style="{ cursor: mode === 'view' ? (isDragging ? 'grabbing' : 'grab') : 'crosshair', backgroundSize: (24 * zoom) + 'px ' + (24 * zoom) + 'px', backgroundPosition: 'calc(50% + ' + pan.x + 'px) calc(50% + ' + pan.y + 'px)' }" @contextmenu.prevent
   @wheel.prevent="handleWheel" @pointerdown="handlePointerDown" @pointermove="handlePointerMove"
   @pointerup="handlePointerEnd" @pointercancel="handlePointerEnd" @lostpointercapture="handlePointerEnd" @keydown.esc="handleEscape">
   <div class="sheet-content" :style="{ transform: 'translate(' + pan.x + 'px,' + pan.y + 'px) scale(' + zoom + ')' }">
@@ -132,6 +132,6 @@ const template = `<section class="sheet-canvas" aria-label="ブレストシー�
       :is-removed="!!proposal?.nodes.removed.includes(node.id)" @selected="handleSelected" @remove-requested="handleRemoved"
       @holding-changed="handleHolding" @size-changed="handleSize" @text-committed="handleTextCommitted" @edit-cancelled="handleEditCancelled"></sheet-node>
   </div>
-  <p class="canvas-hint">{{ hint }} · ホイールでモード · Ctrl＋ホイールでズーム · 右長押し（ShiftでAI）</p>
+  <p class="canvas-hint">{{ hint }} · Wheel for mode · Ctrl+Wheel to zoom · Right-hold (Shift for AI)</p>
 </section>`;
 export default { name, props, emits, components: { SheetNode, SheetEdge, SheetGroup }, setup, template };

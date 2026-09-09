@@ -24,9 +24,6 @@ const name = 'AppRoot';
 const props = {};
 // 外部への通知。
 const emits = [];
-// APIへ渡すモード名。モックの機能名と対応させる。
-const AI_MODES = { related: 'expand', perspective: 'newview', link: 'link', merge: 'merge', group: 'group', summary: 'note' };
-
 // 共有状態と画面操作を接続して返す。
 function setup() {
   const session = useSheetSession();
@@ -41,7 +38,7 @@ function setup() {
   const hasPanel = computed(() => !!panels.editPanel.value || !!panels.noteEditor.value);
   const controlsLocked = computed(() => isStarting.value || isAiPreparing.value || session.isLocked.value || hasPanel.value);
   const canUseAi = computed(() => !controlsLocked.value && !settings.isModelsBusy.value && settings.models.value.includes(settings.currentModel.value));
-  const targetPrompt = computed(() => targetAction.value ? `${targetAction.value.label}：対象ノードをクリックしてください` : '');
+  const targetPrompt = computed(() => targetAction.value ? `${targetAction.value.label}: Click the target node` : '');
 
   onMounted(async () => {
     try {
@@ -148,17 +145,17 @@ function setup() {
 
   // 設定保存を待ってからAIを要求する。シート自動保存はセッション側が行う。
   async function runAi(request) {
-    if (!canUseAi.value) { session.notify('利用可能なモデルを選択してください。', true); return; }
+    if (!canUseAi.value) { session.notify('Please select an available model.', true); return; }
     isAiPreparing.value = true;
     try {
-      if (!await settings.flush()) { session.notify('設定を保存できなかったため、AIの呼び出しを中止しました。', true); return; }
+      if (!await settings.flush()) { session.notify('Could not save settings, so the AI call was cancelled.', true); return; }
       await session.requestAi({ ...request, model_name: settings.currentModel.value, system_prompt: settings.systemPrompt.value });
     } finally { isAiPreparing.value = false; }
   }
   // AI機能を選択し、必要なら対象ノードのクリックを待つ。
   function handleAiChoice(entry) {
-    if (!canUseAi.value) { session.notify('利用可能なモデルを選択してください。', true); return; }
-    if (entry.value === 'perspective') { runAi({ mode: AI_MODES[entry.value], target_node_id: '' }); return; }
+    if (!canUseAi.value) { session.notify('Please select an available model.', true); return; }
+    if (entry.value === 'newview') { runAi({ mode: entry.value, target_node_id: '' }); return; }
     targetAction.value = entry;
   }
   // 選択したノードを対象にAIを要求する。
@@ -166,7 +163,7 @@ function setup() {
     if (!targetAction.value) return;
     const action = targetAction.value;
     targetAction.value = null;
-    runAi({ mode: AI_MODES[action.value], target_node_id: id });
+    runAi({ mode: action.value, target_node_id: id });
   }
   // シート全体の要約を要求する。
   function handleWholeSummary() { targetAction.value = null; runAi({ mode: 'note', target_node_id: '' }); }
@@ -201,16 +198,16 @@ const template = `<main class="app-root" @pointerdown="handlePointerDown">
       :target-prompt="targetPrompt" @mode-changed="handleModeChanged" @wheel-requested="handleWheelRequested" @node-added="handleNodeAdded" @node-text-changed="handleNodeTextChanged"
       @node-removed="handleNodeRemoved" @link-added="handleLinkAdded" @group-requested="handleGroupRequested"
       @edit-requested="handleEditRequested" @target-selected="handleTargetSelected" @notice="handleNotice"></sheet-canvas>
-    <header class="app-header"><h1 class="app-title">AIサポート付きブレスト</h1>
+    <header class="app-header"><h1 class="app-title">AI-Supported Brainstorm</h1>
       <mode-hud :mode="mode" @wheel-requested="handleOpenWheel"></mode-hud></header>
   </div>
   <div class="sheet-header" :inert="!!pendingAction">
     <sheet-title :title="title" :disabled="controlsLocked" @title-changed="handleTitleChanged"></sheet-title>
-    <span class="save-state">{{ hasChanges || !sheetId ? '未保存' : '保存済み' }}</span>
+    <span class="save-state">{{ hasChanges || !sheetId ? '*UNSAVED' : 'Saved' }}</span>
     <sheet-toolbar :can-undo="canUndo" :can-redo="canRedo" :is-busy="controlsLocked"
       @new-sheet="handleNew" @open-sheet-list="handleOpenList" @save="handleSave" @export="handleExport"
       @import="handleImport" @undo="handleUndo" @redo="handleRedo"></sheet-toolbar>
-    <p class="toolbar-status" :class="{ 'error-message': hasError }" role="status">{{ isStarting ? '設定を復元しています…' : message }}</p>
+    <p class="toolbar-status" :class="{ 'error-message': hasError }" role="status">{{ isStarting ? 'Reloading Settings…' : message }}</p>
     <sheet-list-panel v-if="isListOpen" :sheets="sheets" :is-busy="controlsLocked" :has-error="hasError"
       @select="handleLoad" @create-new="handleNew" @close="handleCloseList" @retry="handleOpenList" @delete="handleDeleteSheet"></sheet-list-panel>
   </div>
@@ -226,14 +223,14 @@ const template = `<main class="app-root" @pointerdown="handlePointerDown">
   </aside>
   <div class="proposal-region" aria-live="polite">
     <div v-if="targetAction" class="ai-target"><p>{{ targetPrompt }}</p>
-      <button v-if="targetAction.value === 'summary'" type="button" class="text-button" @click="handleWholeSummary">シート全体を要約</button>
-      <button type="button" class="text-button" @click="handleTargetCancel">キャンセル</button></div>
+      <button v-if="targetAction.value === 'note'" type="button" class="text-button" @click="handleWholeSummary">Summarize Whole Sheet</button>
+      <button type="button" class="text-button" @click="handleTargetCancel">Cancel</button></div>
     <ai-proposal-panel v-if="proposal" :proposal="proposal" @commit="handleProposalCommit" @reject="handleProposalReject"></ai-proposal-panel>
   </div>
   <input ref="fileInput" type="file" accept=".json,application/json" hidden @change="handleFile">
   <radial-wheel v-if="isWheelOpen" :entries="wheelEntries" :center="wheelCenter" :active-index="wheelIndex"
     :kind="wheelKind" :is-keyboard="isWheelKeyboard" @select="handleWheelSelect" @close="handleWheelClose"></radial-wheel>
-  <edit-panel v-if="editPanel" :key="editPanel.kind + (editPanel.item.id || '')" :heading="editPanel.kind === 'link' ? '接続を編集' : 'グループを編集'"
+  <edit-panel v-if="editPanel" :key="editPanel.kind + (editPanel.item.id || '')" :heading="editPanel.kind === 'link' ? 'Edit Link' : 'Edit Group'"
     :has-title="editPanel.kind !== 'link'" :title="editPanel.item.title" :comment="editPanel.item.comment" :color="editPanel.item.color"
     :can-delete="editPanel.kind !== 'newGroup'" :x="editPanel.x" :y="editPanel.y"
     @save="handleEditSave" @delete="handleEditDelete" @close="handleEditClose"></edit-panel>

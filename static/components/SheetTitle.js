@@ -5,7 +5,7 @@ const name = 'SheetTitle';
 // 親が保持しているシートタイトル。
 const props = {
   disabled: { type: Boolean, default: false },
-  title: { type: String, default: '無題のシート' },
+  title: { type: String, default: 'Untitled Sheet' },
 };
 
 // タイトルの編集確定を親へ通知するイベント。
@@ -40,7 +40,7 @@ const template = `
   <input
     class="sheet-title"
     type="text"
-    aria-label="シートタイトル"
+    aria-label="Sheet Title"
     :value="title"
     :disabled="disabled"
     @change="handleChange"

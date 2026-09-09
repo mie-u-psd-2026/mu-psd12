@@ -19,9 +19,9 @@ function setup(props, { emit }) {
 }
 // シート左下の常設入力欄。
 const template = `<form class="mutter-input ai-accent" @submit.prevent="handleSubmit">
-  <label for="mutter-text">ひとりごとメモ</label>
-  <textarea id="mutter-text" v-model="text" :disabled="isBusy" placeholder="浮かんだアイデアをここに…" rows="2"></textarea>
-  <div class="mutter-footer"><small v-if="!canSubmit">モデルを選択すると送信できます</small>
-    <button type="submit" class="icon-button" aria-label="メモをAIに送信" :disabled="!canSubmit || isBusy || !text.trim()"><app-icon icon="send" label="送信"></app-icon></button></div>
+  <label for="mutter-text">Mutter Memo</label>
+  <textarea id="mutter-text" v-model="text" :disabled="isBusy" placeholder="Jot down an idea…" rows="2"></textarea>
+  <div class="mutter-footer"><small v-if="!canSubmit">Select model to submit.</small>
+    <button type="submit" class="icon-button" aria-label="Send memo to AI" :disabled="!canSubmit || isBusy || !text.trim()"><app-icon icon="send" label="Send"></app-icon></button></div>
 </form>`;
 export default { name, props, emits, components: { AppIcon }, setup, template };

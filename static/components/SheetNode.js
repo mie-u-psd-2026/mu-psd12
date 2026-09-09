@@ -96,7 +96,7 @@ const template = `<div ref="element" class="sheet-node" :data-node-id="node.id"
   :class="{ 'theme-node': node.kind === 'theme', 'is-selected': isSelected, 'ai-proposed': isChanged,
     'is-removed': isRemoved, 'is-holding': isHolding }"
   :style="{ left: position.x + 'px', top: position.y + 'px' }">
-  <input v-if="isEditing" ref="editor" v-model="draft" class="node-editor" aria-label="ノードのテキスト"
+  <input v-if="isEditing" ref="editor" v-model="draft" class="node-editor" aria-label="Node text"
     @blur="handleCommit" @keydown="handleKeydown" @pointerdown.stop @wheel.stop>
   <button v-else type="button" class="node-button" :aria-pressed="isSelected" :aria-disabled="isLocked"
     @click.stop="handleSelect" @pointerdown="handleHold" @pointermove="handleMove" @pointerleave="handleCancelHold">{{ node.text }}</button>

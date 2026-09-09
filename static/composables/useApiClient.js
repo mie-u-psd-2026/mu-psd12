@@ -6,15 +6,15 @@ async function request(path, method = 'GET', body) {
     response = await fetch(path, { method, headers: { 'Content-Type': 'application/json' },
       body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(path === '/ai' ? 120000 : 15000) });
   } catch {
-    throw new Error('サーバーに接続できません。起動状態を確認してください。');
+    throw new Error('Cannot connect to the server. Please check it is running.');
   }
   const content = await response.text();
   let data;
   try { data = content ? JSON.parse(content) : null; } catch { data = null; }
   if (!response.ok) {
-    throw new Error(data?.error?.message || `サーバー処理に失敗しました（${response.status}）。`);
+    throw new Error(data?.error?.message || `Server request failed (${response.status}).`);
   }
-  if (content && data === null) throw new Error('サーバーの応答がJSONではありません。');
+  if (content && data === null) throw new Error('The server response is not JSON.');
   return data;
 }
 

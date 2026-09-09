@@ -12,7 +12,7 @@ export function useSheetSession() {
   const { sheetState, addNode, updateNodeText } = useSheetState();
   const history = useUndoRedo();
   const api = useApiClient();
-  const title = ref('無題のシート');
+  const title = ref('Untitled Sheet');
   const sheetId = ref(null);
   const createdAt = ref(new Date().toISOString());
   const updatedAt = ref(createdAt.value);
@@ -68,7 +68,7 @@ export function useSheetSession() {
   function changeLink(id, comment) {
     return edit(() => {
       const link = sheetState.links.find(entry => entry.id === id);
-      if (!link) throw new Error('対象の接続がありません。');
+      if (!link) throw new Error('The target link does not exist.');
       link.comment = comment;
     });
   }
@@ -84,7 +84,7 @@ export function useSheetSession() {
   function changeGroup(id, name, comment, color) {
     return edit(() => {
       const group = sheetState.groups.find(entry => entry.id === id);
-      if (!group || !name.trim()) throw new Error('グループ名を入力してください。');
+      if (!group || !name.trim()) throw new Error('Please enter a group name.');
       Object.assign(group, { title: name.trim(), comment, color });
     });
   }
@@ -93,10 +93,10 @@ export function useSheetSession() {
   // ノートを新規作成または更新する。
   function saveNote(id, name, body) {
     return edit(() => {
-      if (!name.trim()) throw new Error('ノートのタイトルを入力してください。');
+      if (!name.trim()) throw new Error('Please enter a note title.');
       if (!id) { sheetState.notes.push({ id: crypto.randomUUID(), title: name.trim(), body }); return; }
       const note = sheetState.notes.find(entry => entry.id === id);
-      if (!note) throw new Error('対象のノートがありません。');
+      if (!note) throw new Error('The target note does not exist.');
       Object.assign(note, { title: name.trim(), body });
     });
   }
@@ -146,7 +146,7 @@ export function useSheetSession() {
   async function run(operation) {
     if (isLocked.value) return;
     isBusy.value = true;
-    notify('処理中…');
+    notify('Processing…');
     try { await operation(); return true; } catch (err) { notify(err.message, true); return false; }
     finally { isBusy.value = false; }
   }
@@ -176,7 +176,7 @@ export function useSheetSession() {
   // 検証済み本体を新しい編集対象にし、履歴を初期化する。
   function replaceSheet(body, metadata, id) {
     Object.assign(sheetState, body);
-    title.value = metadata.title || '無題のシート';
+    title.value = metadata.title || 'Untitled Sheet';
     createdAt.value = metadata.created_at || new Date().toISOString();
     updatedAt.value = metadata.updated_at || createdAt.value;
     sheetId.value = id;
@@ -188,9 +188,9 @@ export function useSheetSession() {
 
   // 未保存変更を確認し、新規シートをローカルで作成する。
   function newSheet() {
-    requestSwitch('新規シートを作成', () => {
-      replaceSheet(createEmptySheet(), { title: '無題のシート' }, null);
-      notify('新規シートを作成しました。保存するとサーバーに登録されます。');
+    requestSwitch('Create New Sheet', () => {
+      replaceSheet(createEmptySheet(), { title: 'Untitled Sheet' }, null);
+      notify('Created a new sheet. It will be registered on the server once saved.');
     });
   }
 
@@ -200,7 +200,7 @@ export function useSheetSession() {
     const current = snapshot();
     if (!sheetId.value) {
       const data = await api.createSheet(title.value);
-      if (!data || typeof data.id !== 'string' || !data.id) throw new Error('新規シートIDを取得できませんでした。');
+      if (!data || typeof data.id !== 'string' || !data.id) throw new Error('Failed to obtain a new sheet ID.');
       sheetId.value = data.id;
     }
     const data = await api.saveSheet(sheetId.value, { title: title.value, ...body });
@@ -212,16 +212,16 @@ export function useSheetSession() {
 
   // シートを保存し、成功を通知する。
   async function save() {
-    return run(async () => { await persist(); notify('保存しました。'); });
+    return run(async () => { await persist(); notify('Saved.'); });
   }
 
   // 自動保存の成功後にAIを呼び、検証済みの提案を未確定の状態で表示する。
   async function requestAi(request) {
-    if (!request.model_name) { notify('AIモデルを選択してください。', true); return false; }
+    if (!request.model_name) { notify('Please select an AI model.', true); return false; }
     return run(async () => {
-      if (typeof request.target_node_id !== 'string') throw new Error('AIの対象ノードIDが必要です。全体を対象にする場合は空文字列を指定してください。');
+      if (typeof request.target_node_id !== 'string') throw new Error('An AI target node ID is required. Use an empty string to target the whole sheet.');
       if (request.target_node_id !== '' && !sheetState.nodes.some(node => node.id === request.target_node_id)) {
-        throw new Error('AIの対象ノードがありません。');
+        throw new Error('The AI target node does not exist.');
       }
       await persist();
       // ひとりごとの本文はtext、利用プロンプトはsystem_promptで渡す。
@@ -230,7 +230,7 @@ export function useSheetSession() {
       proposalBase = snapshot();
       proposalSheet = sheetId.value;
       proposal.value = prepared;
-      notify('破線の変更箇所を確認し、一括承認または却下してください。');
+      notify('Review the dashed changes, then approve or reject them all at once.');
     });
   }
 
@@ -239,20 +239,20 @@ export function useSheetSession() {
     if (isBusy.value || !proposal.value) return false;
     if (proposalBase !== snapshot() || proposalSheet !== sheetId.value) {
       proposal.value = null;
-      notify('提案後にシートが変わったため、もう一度AIを呼び出してください。', true);
+      notify('The sheet changed after the proposal was made. Please call AI again.', true);
       return false;
     }
     const result = proposal.value.result;
     proposal.value = null;
     const success = edit(() => Object.assign(sheetState, parseSheet(result)));
-    if (success) notify('AI提案を一括適用しました。Undoで戻せます。');
+    if (success) notify('Applied the AI proposal. You can undo it.');
     return success;
   }
 
   // 未確定の提案だけを破棄し、シートには変更を加えない。
   function rejectProposal() {
     proposal.value = null;
-    notify('AI提案を却下しました。');
+    notify('Rejected the AI proposal.');
   }
 
   // 一覧パネルを開き、サーバーの保存済みシートを取得する。
@@ -262,36 +262,36 @@ export function useSheetSession() {
     await run(async () => {
       const data = await api.getSheets();
       if (!Array.isArray(data) || data.some(item => !item || typeof item.id !== 'string' || typeof item.title !== 'string')) {
-        throw new Error('シート一覧の応答形式が不正です。');
+        throw new Error('The sheet list response format is invalid.');
       }
       sheets.value = data;
-      notify(data.length ? '' : '保存済みシートはありません。');
+      notify(data.length ? '' : 'No saved sheets.');
     });
   }
 
   // シートIDを受け取り、未保存変更を確認後に取得・検証して切り替える。
   function loadSheet(id) {
-    return requestSwitch('シートを読み込む', () => run(async () => {
+    return requestSwitch('Load Sheet', () => run(async () => {
       const data = await api.getSheet(id);
       const body = parseSheet(data);
       const metadata = data;
-      if (typeof metadata.title !== 'string') throw new Error('シートタイトルが不正です。');
+      if (typeof metadata.title !== 'string') throw new Error('The sheet title is invalid.');
       // GET /sheet はバックエンド側で最後に開いたシートを更新する。
       replaceSheet(body, metadata, id);
-      notify('読み込みました。');
+      notify('Loaded.');
     }));
   }
 
   // 保存済みシートを確認後に削除する。現在の編集対象なら新規状態へ戻す。
   function deleteSheet(id) {
     if (isLocked.value) return;
-    pendingAction.value = { label: '保存済みシートを削除', title: 'シートを削除しますか？',
-      message: 'サーバーから削除します。この操作はUndoでは戻せません。', operation: () => run(async () => {
+    pendingAction.value = { label: 'Delete Saved Sheet', title: 'Delete this sheet?',
+      message: 'This will delete it from the server. This action cannot be undone.', operation: () => run(async () => {
         await api.deleteSheet(id);
         sheets.value = sheets.value.filter(sheet => sheet.id !== id);
-        if (sheetId.value === id) replaceSheet(createEmptySheet(), { title: '無題のシート' }, null);
+        if (sheetId.value === id) replaceSheet(createEmptySheet(), { title: 'Untitled Sheet' }, null);
         await api.updateState({ last_opened_sheet_id: sheetId.value });
-        notify('シートを削除しました。');
+        notify('Deleted the sheet.');
       }) };
   }
 
@@ -306,7 +306,7 @@ export function useSheetSession() {
       anchor.download = `${title.value.replace(/[\\/:*?"<>|]/g, '_').slice(0, 80) || 'sheet'}.json`;
       anchor.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      notify('JSONをエクスポートしました。');
+      notify('Exported the JSON.');
     } catch (err) { notify(err.message, true); }
   }
 
@@ -314,17 +314,17 @@ export function useSheetSession() {
   async function importSheet(file) {
     if (!file) return;
     await run(async () => {
-      if (file.size > 5 * 1024 * 1024) throw new Error('5MB以下のJSONファイルを選んでください。');
+      if (file.size > 5 * 1024 * 1024) throw new Error('Please choose a JSON file 5MB or smaller.');
       const data = JSON.parse(await file.text());
       const body = parseSheet(data);
-      if (!data.metadata || typeof data.metadata.title !== 'string') throw new Error('metadata.titleが必要です。');
+      if (!data.metadata || typeof data.metadata.title !== 'string') throw new Error('metadata.title is required.');
       const metadata = { title: data.metadata.title };
       // 検証後に確認するため、現在のシートは失敗時にも保持される。
       const operation = () => {
         replaceSheet(body, metadata, null);
-        notify('新規シートとしてインポートしました。保存でサーバーに登録できます。');
+        notify('Imported as a new sheet. Save it to register on the server.');
       };
-      if (hasChanges.value) pendingAction.value = { label: 'JSONをインポート', operation };
+      if (hasChanges.value) pendingAction.value = { label: 'Import JSON', operation };
       else operation();
     });
   }

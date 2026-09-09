@@ -14,17 +14,17 @@ const emits = ['wheelRequested'];
 
 // 操作モードに対応する表示名。
 const MODE_LABELS = {
-  view: 'ビュー',
-  add: 'ノード追加',
-  remove: 'ノード削除',
-  edit: 'ノード編集',
-  join: 'ノード接続',
-  group: 'グループ化',
+  view: 'View',
+  add: 'Add Node',
+  remove: 'Delete Node',
+  edit: 'Edit Node',
+  join: 'Join Node',
+  group: 'Make Group',
 };
 
 // propsのモードを表示名に変換し、テンプレートへ返す。
 function setup(props, { emit }) {
-  const modeLabel = computed(() => MODE_LABELS[props.mode] ?? 'ビュー');
+  const modeLabel = computed(() => MODE_LABELS[props.mode] ?? 'View');
   // モード表示のクリック位置を親へ通知する。
   function handleOpen(event) { emit('wheelRequested', event); }
   return { modeLabel, handleOpen };
@@ -32,7 +32,7 @@ function setup(props, { emit }) {
 
 // 現在のモードを表示するテンプレート。
 const template = `
-  <button type="button" class="mode-hud text-button" aria-haspopup="menu" @click="handleOpen">モード：{{ modeLabel }} ▾</button>
+  <button type="button" class="mode-hud text-button" aria-haspopup="menu" @click="handleOpen">Mode: {{ modeLabel }} ▾</button>
 `;
 
 export default { name, props, emits, setup, template };

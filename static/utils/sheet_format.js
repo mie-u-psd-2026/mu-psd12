@@ -4,13 +4,13 @@ export const GROUP_COLORS = ['#d4e4f7', '#f7d4e0', '#d4f7e0', '#f7f0d4', '#e4d4f
 
 // 空のシート本体を新しく作成して返す。
 export function createEmptySheet() {
-  return { nodes: [{ id: 'n0', kind: 'theme', text: 'メインテーマ', parent: null }],
+  return { nodes: [{ id: 'n0', kind: 'theme', text: 'Main Theme', parent: null }],
     links: [], groups: [], notes: [] };
 }
 
 // 任意の値を受け取り、文字列でなければ入力エラーを投げる。
 function requireText(value) {
-  if (typeof value !== 'string') throw new Error('文字列でない項目が含まれています。');
+  if (typeof value !== 'string') throw new Error('A non-string value was found.');
   return value;
 }
 
@@ -19,7 +19,7 @@ function collectIds(entries) {
   const ids = new Set();
   for (const entry of entries) {
     if (!entry || typeof entry.id !== 'string' || !entry.id || ids.has(entry.id)) {
-      throw new Error('IDが空、重複、または不正です。');
+      throw new Error('An ID is empty, duplicated, or invalid.');
     }
     ids.add(entry.id);
   }
@@ -29,14 +29,14 @@ function collectIds(entries) {
 // 外部シートを検証し、座標等の余分なフィールドを除いた本体を返す。
 export function parseSheet(value) {
   if (!value || !['nodes', 'links', 'groups', 'notes'].every(key => Array.isArray(value[key]))) {
-    throw new Error('nodes・links・groups・notesの配列が必要です。');
+    throw new Error('Arrays for nodes, links, groups, and notes are required.');
   }
   const ids = collectIds(value.nodes);
   const roots = value.nodes.filter(node => node.parent === null);
-  if (roots.length !== 1 || roots[0].kind !== 'theme') throw new Error('テーマノードは1つ必要です。');
+  if (roots.length !== 1 || roots[0].kind !== 'theme') throw new Error('Exactly one theme node is required.');
   const nodes = value.nodes.map(node => {
     if (node.parent !== null && (!ids.has(node.parent) || node.kind !== 'idea')) {
-      throw new Error('ノードの親または種別が不正です。');
+      throw new Error("A node's parent or kind is invalid.");
     }
     return { id: node.id, kind: node.kind, text: requireText(node.text), parent: node.parent };
   });
@@ -45,7 +45,7 @@ export function parseSheet(value) {
     const visited = new Set();
     let id = node.id;
     while (id !== null) {
-      if (visited.has(id)) throw new Error('親子関係が循環しています。');
+      if (visited.has(id)) throw new Error('The parent/child relationship is circular.');
       visited.add(id);
       id = parents.get(id);
     }
@@ -55,17 +55,17 @@ export function parseSheet(value) {
   collectIds(value.notes);
   const pairs = new Set();
   const links = value.links.map(link => {
-    if (!ids.has(link.a) || !ids.has(link.b) || link.a === link.b) throw new Error('接続先が不正です。');
+    if (!ids.has(link.a) || !ids.has(link.b) || link.a === link.b) throw new Error('A link endpoint is invalid.');
     const pair = JSON.stringify([link.a, link.b].sort());
-    if (pairs.has(pair)) throw new Error('接続が重複しています。');
+    if (pairs.has(pair)) throw new Error('A link is duplicated.');
     pairs.add(pair);
     return { id: link.id, a: link.a, b: link.b, comment: requireText(link.comment) };
   });
   const assigned = new Set();
   const groups = value.groups.map(group => {
-    if (!Array.isArray(group.members)) throw new Error('グループのメンバーが不正です。');
+    if (!Array.isArray(group.members)) throw new Error('The group members are invalid.');
     for (const id of group.members) {
-      if (!ids.has(id) || assigned.has(id)) throw new Error('グループの所属が重複または不正です。');
+      if (!ids.has(id) || assigned.has(id)) throw new Error('A group membership is duplicated or invalid.');
       assigned.add(id);
     }
     return { id: group.id, members: [...group.members], title: requireText(group.title),

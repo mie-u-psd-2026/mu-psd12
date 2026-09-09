@@ -39,7 +39,7 @@ async function switchMode(page, label) {
 async function dismissDiscardIfPresent(page) {
   const panel = page.locator('.discard-panel');
   if (await panel.count()) {
-    await panel.getByRole('button', { name: '続ける', exact: true }).click();
+    await panel.getByRole('button', { name: 'Continue', exact: true }).click();
   }
 }
 
@@ -69,14 +69,14 @@ await titleInput.fill('E2E確認シート');
 await titleInput.press('Enter');
 await page.waitForTimeout(50);
 assert.equal(await titleInput.inputValue(), 'E2E確認シート');
-await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+await page.getByRole('button', { name: 'Undo', exact: true }).click();
 assert.equal(await titleInput.inputValue(), initialTitle);
-await page.getByRole('button', { name: 'やり直す', exact: true }).click();
+await page.getByRole('button', { name: 'Redo', exact: true }).click();
 assert.equal(await titleInput.inputValue(), 'E2E確認シート');
 log('タイトル編集・Undo/Redo');
 
 // ノード追加（子・孫）
-await switchMode(page, 'ノード追加');
+await switchMode(page, 'Add Node');
 await page.locator('[data-node-id="n0"]').click();
 await page.waitForTimeout(50);
 let ids = await nodeIds(page);
@@ -91,7 +91,7 @@ log('ノード追加（子・孫）');
 
 // ノード削除（600ms長押し、短い長押しでは削除しないこと、サブツリーごと削除、Undo）
 // design-document.md 4.1: 削除対象に子孫ノードがある場合は子孫ノードも全て共に削除する。
-await switchMode(page, 'ノード削除');
+await switchMode(page, 'Delete Node');
 const childButton = page.locator(`[data-node-id="${childId}"] .node-button`);
 const box = await childButton.boundingBox();
 await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
@@ -108,26 +108,26 @@ await page.waitForTimeout(50);
 const idsAfterDelete = await nodeIds(page);
 assert.equal(idsAfterDelete.length, 1, '600ms長押しで子孫ノードもサブツリーごと削除される');
 assert(!idsAfterDelete.includes(grandchildId), '孫ノードも削除されている');
-await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+await page.getByRole('button', { name: 'Undo', exact: true }).click();
 await page.waitForTimeout(50);
 assert.equal((await nodeIds(page)).length, 3, 'Undoでサブツリーごと復元される');
 log('ノード削除（600ms長押し・取消・サブツリー削除・Undo）');
 
 // モード別カーソル（design-document.md 6.4: view=grab、それ以外=crosshair）。
 // jsdomは実CSSを適用しないため、実ブラウザでのみ意味のある検証。
-await switchMode(page, 'ビュー');
+await switchMode(page, 'View');
 assert.equal(
   await page.locator('.sheet-canvas').evaluate(el => getComputedStyle(el).cursor),
   'grab',
   'viewモードはgrabカーソル',
 );
-await switchMode(page, 'ノード追加');
+await switchMode(page, 'Add Node');
 assert.equal(
   await page.locator('.sheet-canvas').evaluate(el => getComputedStyle(el).cursor),
   'crosshair',
   'view以外は十字カーソル',
 );
-await switchMode(page, 'ビュー');
+await switchMode(page, 'View');
 log('モード別カーソル表示');
 
 // ビネット効果（design-document.md 6.2）。実際に描画され視認可能な状態であることを確認する。
@@ -170,7 +170,7 @@ log('モード別カーソル表示');
 // メインテーマノードの拡大表示（design-document.md 6.4）。
 // テキスト量の差によるサイズ差を排除するため、両ノードを同じテキストに揃えてから比較する。
 {
-  await switchMode(page, 'ノード編集');
+  await switchMode(page, 'Edit Node');
   await page.locator('[data-node-id="n0"] .node-button').click();
   await page.locator('[data-node-id="n0"] .node-editor').fill('同一テキスト');
   await page.locator('[data-node-id="n0"] .node-editor').press('Enter');
@@ -183,8 +183,8 @@ log('モード別カーソル表示');
   const ideaBox = await page.locator(`[data-node-id="${grandchildId}"] .node-button`).boundingBox();
   assert(themeBox.width > ideaBox.width || themeBox.height > ideaBox.height,
     '同じテキストでもテーマノードは通常ノードより大きい');
-  await page.getByRole('button', { name: '元に戻す', exact: true }).click();
-  await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await page.waitForTimeout(50);
   log('メインテーマノードの拡大表示');
 }
@@ -194,21 +194,21 @@ log('モード別カーソル表示');
   await page.locator('.sheet-title').fill('未保存の確認用タイトル');
   await page.locator('.sheet-title').press('Enter');
   await page.waitForTimeout(50);
-  await page.getByRole('button', { name: '新規', exact: true }).click();
+  await page.getByRole('button', { name: 'Create', exact: true }).click();
   await page.waitForTimeout(100);
   assert.equal(await page.locator('.discard-panel').count(), 1, '未保存の変更がある場合は確認ダイアログが表示される');
-  await page.locator('.discard-panel').getByRole('button', { name: 'キャンセル', exact: true }).click();
+  await page.locator('.discard-panel').getByRole('button', { name: 'Cancel', exact: true }).click();
   await page.waitForTimeout(50);
   assert.equal(await titleInput.inputValue(), '未保存の確認用タイトル', 'キャンセルで編集内容が保持される');
   // 後続のテストに影響しないよう、タイトルを元に戻しておく。
-  await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await page.waitForTimeout(50);
   assert.equal(await titleInput.inputValue(), 'E2E確認シート');
   log('未保存確認ダイアログの表示');
 }
 
 // ノード接続（作成・コメント編集・削除・Undo）
-await switchMode(page, 'ノード接続');
+await switchMode(page, 'Join Node');
 await page.locator('[data-node-id="n0"] .node-button').click();
 await page.locator(`[data-node-id="${grandchildId}"] .node-button`).click();
 await page.waitForTimeout(50);
@@ -218,18 +218,18 @@ await page.locator('.edit-panel textarea').fill('E2E接続コメント');
 await page.locator('.edit-panel button[type="submit"]').click();
 await page.waitForTimeout(50);
 await page.locator('.edge-hit').click();
-await page.locator('.edit-panel').getByRole('button', { name: '削除', exact: true }).click();
+await page.locator('.edit-panel').getByRole('button', { name: 'Delete', exact: true }).click();
 await page.waitForTimeout(50);
 assert.equal(await page.locator('.edge-hit').count(), 0);
-await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+await page.getByRole('button', { name: 'Undo', exact: true }).click();
 await page.waitForTimeout(50);
 assert.equal(await page.locator('.edge-hit').count(), 1, 'Undoで接続が復元される');
 log('ノード接続（作成・コメント編集・削除・Undo）');
 
 // グループ化（作成・タイトル/色編集・除外・Undo）
-await switchMode(page, 'グループ化');
+await switchMode(page, 'Group Node');
 await page.locator(`[data-node-id="${childId}"] .node-button`).click();
-await (await wheelItem(page, '新規グループ')).click();
+await (await wheelItem(page, 'New Group')).click();
 await page.locator('.edit-panel input').fill('E2Eグループ');
 await page.locator('.edit-panel textarea').fill('E2E説明');
 await page.locator('.edit-panel button[type="submit"]').click();
@@ -240,41 +240,41 @@ assert.equal(
   'E2Eグループ',
 );
 await page.locator(`[data-node-id="${childId}"] .node-button`).click();
-await (await wheelItem(page, 'グループから除外')).click();
+await (await wheelItem(page, 'Remove from Group')).click();
 await page.waitForTimeout(50);
-await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+await page.getByRole('button', { name: 'Undo', exact: true }).click();
 await page.waitForTimeout(50);
 log('グループ作成・タイトル編集・除外・Undo');
 
 // ノート（追加・編集・削除・Undo）
-await page.getByRole('button', { name: 'ノートを追加', exact: true }).click();
+await page.getByRole('button', { name: 'Add Note', exact: true }).click();
 await page.locator('.note-editor input').fill('E2Eノート');
 await page.locator('.note-editor textarea').fill('E2E本文');
 await page.locator('.note-editor button[type="submit"]').click();
 await page.waitForTimeout(50);
 // ノート一覧は<details>で折り畳まれているため、summaryをクリックして展開してから編集する。
 await page.locator('.notes-panel summary', { hasText: 'E2Eノート' }).click();
-await page.getByRole('button', { name: 'ノートを編集：E2Eノート', exact: true }).click();
+await page.getByRole('button', { name: 'Edit note: E2Eノート', exact: true }).click();
 await page.locator('.note-editor textarea').fill('E2E編集後本文');
 await page.locator('.note-editor button[type="submit"]').click();
 await page.waitForTimeout(50);
-await page.getByRole('button', { name: 'ノートを削除：E2Eノート', exact: true }).click();
+await page.getByRole('button', { name: 'Delete note: E2Eノート', exact: true }).click();
 await page.waitForTimeout(50);
-await page.getByRole('button', { name: '元に戻す', exact: true }).click();
+await page.getByRole('button', { name: 'Undo', exact: true }).click();
 await page.waitForTimeout(50);
 log('ノートCRUD・Undo');
 
 // 保存 → 読込一覧に反映 → 再読込
 // 既知バグ: PUT /sheet/{id} のAPI契約がFE/BEで不一致（WBS.md 9/8参照）のため、
 // 保存は現状400で失敗する。失敗を検知したら以降の保存依存ステップはSKIPし、テストは止めない。
-await page.getByRole('button', { name: '保存', exact: true }).click();
+await page.getByRole('button', { name: 'Save', exact: true }).click();
 await page.waitForTimeout(300);
 const saveFailed = await page.locator('.toolbar-status.error-message').count() > 0;
 if (saveFailed) {
   console.log('  -> ' + await page.locator('.toolbar-status').innerText());
   skip('保存・読込一覧反映・再読込', '既知バグ: PUT /sheet/{id}のFE/BE契約不一致で保存が失敗する');
 } else {
-  await page.getByRole('button', { name: '読込', exact: true }).click();
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
   await page.waitForTimeout(200);
   const entry = page.locator('.sheet-list-entry', { hasText: 'E2E確認シート' });
   assert.equal(await entry.count(), 1, '保存したシートが一覧に表示される');
@@ -287,17 +287,17 @@ if (saveFailed) {
 // エクスポート → 新規シート → インポート → 内容復元
 const [download] = await Promise.all([
   page.waitForEvent('download'),
-  page.getByRole('button', { name: 'エクスポート', exact: true }).click(),
+  page.getByRole('button', { name: 'Export', exact: true }).click(),
 ]);
 const exportPath = path.join(os.tmpdir(), 'e2e-export.json');
 await download.saveAs(exportPath);
 const exported = JSON.parse(fs.readFileSync(exportPath, 'utf-8'));
 assert.equal(exported.metadata?.title, 'E2E確認シート');
 
-await page.getByRole('button', { name: '新規', exact: true }).click();
+await page.getByRole('button', { name: 'Create', exact: true }).click();
 await dismissDiscardIfPresent(page);
 await page.waitForTimeout(200);
-await page.getByRole('button', { name: 'インポート', exact: true }).click();
+await page.getByRole('button', { name: 'Import', exact: true }).click();
 await page.locator('input[type=file]').setInputFiles(exportPath);
 await page.waitForTimeout(200);
 await dismissDiscardIfPresent(page);
@@ -310,23 +310,23 @@ log('エクスポート・インポートの往復整合性');
 if (saveFailed) {
   skip('シート削除（確認付き）', '既知バグ: 保存が失敗するため削除対象の保存済みシートを用意できない');
 } else {
-  await page.getByRole('button', { name: '読込', exact: true }).click();
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
   await page.waitForTimeout(200);
   const savedEntry = page.locator('.sheet-list-entry', { hasText: 'E2E確認シート' });
   await savedEntry.click();
   await dismissDiscardIfPresent(page);
   await page.waitForTimeout(200);
-  await page.getByRole('button', { name: '読込', exact: true }).click();
+  await page.getByRole('button', { name: 'Load', exact: true }).click();
   await page.waitForTimeout(200);
-  await page.getByRole('button', { name: 'シートを削除：E2E確認シート', exact: true }).click();
+  await page.getByRole('button', { name: 'Delete sheet: E2E確認シート', exact: true }).click();
   await dismissDiscardIfPresent(page);
   await page.waitForTimeout(200);
-  assert.equal(await titleInput.inputValue(), '無題のシート', '削除後は新規シートの状態になる');
+  assert.equal(await titleInput.inputValue(), 'Untitled Sheet', '削除後は新規シートの状態になる');
   log('シート削除（確認付き）');
 }
 
 // 異常系: テーマノードは削除できない
-await switchMode(page, 'ノード削除');
+await switchMode(page, 'Delete Node');
 const countBeforeThemeDelete = (await nodeIds(page)).length;
 const themeBox = await page.locator('[data-node-id="n0"] .node-button').boundingBox();
 await page.mouse.move(themeBox.x + themeBox.width / 2, themeBox.y + themeBox.height / 2);

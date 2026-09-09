@@ -19,11 +19,11 @@ function setup(props, { emit }) {
   return { title, body, input, handleSave, handleClose };
 }
 // 本文の改行と任意の文字列を、そのままテキストとして編集する。
-const template = `<form class="note-editor" aria-label="ノート編集" @submit.prevent="handleSave" @keydown.esc.stop="handleClose">
-  <h2>{{ note ? 'ノート編集' : 'ノートを作成' }}</h2>
-  <label>タイトル<input ref="input" v-model="title" required></label>
-  <label>本文<textarea v-model="body" rows="8"></textarea></label>
-  <div class="edit-actions"><button type="button" class="text-button" @click="handleClose">キャンセル</button>
-    <button type="submit" class="text-button" :disabled="!title.trim()">保存</button></div>
+const template = `<form class="note-editor" aria-label="Edit Note" @submit.prevent="handleSave" @keydown.esc.stop="handleClose">
+  <h2>{{ note ? 'Edit Note' : 'Create Note' }}</h2>
+  <label>Title<input ref="input" v-model="title" required></label>
+  <label>Body<textarea v-model="body" rows="8"></textarea></label>
+  <div class="edit-actions"><button type="button" class="text-button" @click="handleClose">Cancel</button>
+    <button type="submit" class="text-button" :disabled="!title.trim()">Save</button></div>
 </form>`;
 export default { name, props, emits, setup, template };

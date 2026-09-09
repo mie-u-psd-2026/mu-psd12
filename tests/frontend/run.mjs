@@ -64,16 +64,16 @@ assert.equal(document.querySelectorAll('.toolbar-button svg').length, 7);
 results.push('設定・モデル一覧の起動時復元、全コンポーネントのマウント');
 
 await input(document.querySelector('.sheet-title'), '実装確認', 'change');
-await click(button('元に戻す'));
-assert.equal(vm.title, '無題のシート');
-await click(button('やり直す'));
+await click(button('Undo'));
+assert.equal(vm.title, 'Untitled Sheet');
+await click(button('Redo'));
 assert.equal(vm.title, '実装確認');
-await mode('ノード追加');
+await mode('Add Node');
 await click(document.querySelector('.node-button'));
 const childId = vm.sheetState.nodes[1].id;
 await click(document.querySelectorAll('.node-button')[1]);
 const grandchildId = vm.sheetState.nodes[2].id;
-await mode('ノード削除');
+await mode('Delete Node');
 // design-document.md 4.1: 長押し600msで削除、子孫はサブツリーごと削除する（付け替えではない）。
 let childButton = document.querySelectorAll('.node-button')[1];
 childButton.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0, clientX: 50, clientY: 50 }));
@@ -86,14 +86,14 @@ await new Promise(resolve => setTimeout(resolve, 620));
 await settle();
 assert.equal(vm.sheetState.nodes.length, 1, '子孫ノードもサブツリーごと削除される');
 assert(!vm.sheetState.nodes.some(node => node.id === grandchildId), '孫ノードも削除されている');
-await click(button('元に戻す'));
+await click(button('Undo'));
 assert.equal(vm.sheetState.nodes.length, 3, 'Undoでサブツリーごと復元される');
 vm.deleteNode('n0'); await settle();
 assert.equal(vm.sheetState.nodes.length, 3);
-assert(vm.message.includes('テーマ'));
+assert(vm.message.includes('theme'));
 results.push('600ms長押し・取消、サブツリー削除、テーマ保護、Undo');
 
-await mode('ノード接続');
+await mode('Join Node');
 await click(document.querySelectorAll('.node-button')[0]);
 await click(document.querySelectorAll('.node-button')[2]);
 assert.equal(vm.sheetState.links.length, 1);
@@ -105,51 +105,51 @@ assert.equal(vm.sheetState.links[0].comment, '接続コメント');
 const count = vm.sheetState.links.length;
 vm.createLink(grandchildId, 'n0'); await settle();
 assert.equal(vm.sheetState.links.length, count);
-assert(vm.message.includes('既に'));
+assert(vm.message.includes('already connected'));
 await click(document.querySelector('.edge-hit'));
-await click([...document.querySelectorAll('.edit-panel button')].find(item => item.textContent === '削除'));
+await click([...document.querySelectorAll('.edit-panel button')].find(item => item.textContent === 'Delete'));
 assert.equal(vm.sheetState.links.length, 0);
-await click(button('元に戻す'));
+await click(button('Undo'));
 assert.equal(vm.sheetState.links.length, 1);
 results.push('接続作成・コメント編集・削除、逆向き重複防止');
 
-await mode('グループ化');
+await mode('Group Node');
 await click(document.querySelectorAll('.node-button')[1]);
-await click(button('新規グループ'));
-await input(document.querySelector('.edit-panel input'), 'グループA');
-await input(document.querySelector('.edit-panel textarea'), '説明A');
+await click(button('New Group'));
+await input(document.querySelector('.edit-panel input'), 'Group A');
+await input(document.querySelector('.edit-panel textarea'), 'Description A');
 await click(document.querySelector('.edit-panel button[type="submit"]'));
 assert.equal(vm.sheetState.groups.length, 1);
 assert.equal(vm.sheetState.groups[0].members[0], childId);
 await click(document.querySelectorAll('.node-button')[2]);
-await click(button('グループA'));
+await click(button('Group A'));
 assert.equal(vm.sheetState.groups[0].members.length, 2);
 await click(document.querySelector('.group-title'));
-await input(document.querySelector('.edit-panel input'), '更新グループ');
-await click(button('グループ色 2'));
+await input(document.querySelector('.edit-panel input'), 'Updated Group');
+await click(button('Group Color 2'));
 await click(document.querySelector('.edit-panel button[type="submit"]'));
-assert.equal(vm.sheetState.groups[0].title, '更新グループ');
+assert.equal(vm.sheetState.groups[0].title, 'Updated Group');
 assert.equal(vm.sheetState.groups[0].color, '#f7d4e0');
 await click(document.querySelectorAll('.node-button')[1]);
-await click(button('グループから除外'));
+await click(button('Remove from Group'));
 assert.deepEqual([...vm.sheetState.groups[0].members], [grandchildId]);
-await click(button('元に戻す'));
+await click(button('Undo'));
 assert.equal(vm.sheetState.groups[0].members.length, 2);
 results.push('グループ作成・所属・除外・名前/コメント/色編集');
 
-await click(button('ノートを追加'));
-await input(document.querySelector('.note-editor input'), '手動ノート');
-await input(document.querySelector('.note-editor textarea'), '本文\n<script>テキスト</script>');
+await click(button('Add Note'));
+await input(document.querySelector('.note-editor input'), 'Manual Note');
+await input(document.querySelector('.note-editor textarea'), 'Body\n<script>text</script>');
 await click(document.querySelector('.note-editor button[type="submit"]'));
 assert.equal(vm.sheetState.notes.length, 1);
-await click(button('ノートを編集：手動ノート'));
-await input(document.querySelector('.note-editor textarea'), '編集済み本文');
+await click(button('Edit note: Manual Note'));
+await input(document.querySelector('.note-editor textarea'), 'Edited body');
 await click(document.querySelector('.note-editor button[type="submit"]'));
-assert.equal(vm.sheetState.notes[0].body, '編集済み本文');
-await click(button('ノートを削除：手動ノート'));
+assert.equal(vm.sheetState.notes[0].body, 'Edited body');
+await click(button('Delete note: Manual Note'));
 assert.equal(vm.sheetState.notes.length, 0);
-await click(button('元に戻す'));
-assert.equal(vm.sheetState.notes[0].body, '編集済み本文');
+await click(button('Undo'));
+assert.equal(vm.sheetState.notes[0].body, 'Edited body');
 results.push('ノートCRUD、改行・テキスト表示、Undo');
 
 // シミュレーションを進め、根の固定、停止、座標の非永続化を確認。
@@ -185,24 +185,24 @@ assert(vm.proposal);
 assert(document.querySelector('.ai-proposed'));
 assert(document.querySelector('.ai-edge'));
 assert(document.querySelector('.ai-group'));
-assert(button('保存').disabled);
+assert(button('Save').disabled);
 const sequence = requests.slice(requestStart);
 assert(sequence.findIndex(item => item.method === 'PUT' && item.path.startsWith('/sheet/')) < sequence.findIndex(item => item.path === '/ai'));
 const lockedBefore = vm.sheetState.nodes.length;
 vm.createNode('n0');
 assert.equal(vm.sheetState.nodes.length, lockedBefore);
-await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === '却下'));
+await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === 'Reject'));
 assert.equal(JSON.stringify(vm.sheetState), original);
 await vm.requestAi({ model_name: 'local-model', mode: 'expand', target_node_id: 'n0' });
 await settle();
-await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === '一括承認'));
+await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === 'Approve All'));
 assert.equal(vm.sheetState.nodes.length, lockedBefore + 1);
 assert(vm.sheetState.notes.some(note => note.title === 'AIノート'));
 assert(!vm.sheetState.nodes.some(node => node.id === 'new1'));
 parseSheet(vm.sheetState);
-await click(button('元に戻す'));
+await click(button('Undo'));
 assert.equal(JSON.stringify(vm.sheetState), original);
-await click(button('やり直す'));
+await click(button('Redo'));
 assert.equal(vm.sheetState.nodes.length, lockedBefore + 1);
 results.push('AI前自動保存、差分表示、却下・一括承認、実ID変換、全体Undo/Redo');
 
@@ -286,17 +286,17 @@ results.push('JSON入出力・未保存確認・新規ID・履歴上限');
 
 // 空グループを含めた削除と、所属移動を確認する。
 const groupId = vm.sheetState.groups[0].id;
-vm.createGroup([childId], '移動先', '', '#d4f7e0');
+vm.createGroup([childId], 'Move Target', '', '#d4f7e0');
 await settle();
 assert.equal(vm.sheetState.groups.filter(group => group.members.includes(childId)).length, 1);
 vm.excludeGroup(childId);
 await settle();
-const emptyGroup = vm.sheetState.groups.find(group => group.title === '移動先');
+const emptyGroup = vm.sheetState.groups.find(group => group.title === 'Move Target');
 assert.equal(emptyGroup.members.length, 0);
-await click(button('グループ一覧から編集：移動先'));
-await click([...document.querySelectorAll('.edit-panel button')].find(item => item.textContent === '削除'));
+await click(button('Edit from group list: Move Target'));
+await click([...document.querySelectorAll('.edit-panel button')].find(item => item.textContent === 'Delete'));
 assert(!vm.sheetState.groups.some(group => group.id === emptyGroup.id));
-await click(button('元に戻す'));
+await click(button('Undo'));
 assert(vm.sheetState.groups.some(group => group.id === emptyGroup.id));
 results.push('グループ単一所属・空グループ削除・Undo');
 
@@ -315,7 +315,7 @@ const mutterRequest = requests.filter(item => item.path === '/ai').at(-1).body;
 assert.equal(mutterRequest.mode, 'mutter');
 assert.equal(mutterRequest.text, '送信したいアイデア');
 assert.equal(mutterRequest.system_prompt, '最後の指示');
-await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === '却下'));
+await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === 'Reject'));
 assert.equal(document.querySelector('#mutter-text').value, '送信したいアイデア');
 
 // AIホイールから全体要約とノード対象の選択まで操作する。
@@ -324,14 +324,14 @@ async function aiChoice(label) {
   await new Promise(resolve => setTimeout(resolve, 370)); await settle();
   await click(button(label));
 }
-await aiChoice('ノートに要約');
+await aiChoice('Summary');
 assert(vm.targetPrompt);
-await click([...document.querySelectorAll('.ai-target button')].find(item => item.textContent === 'シート全体を要約'));
+await click([...document.querySelectorAll('.ai-target button')].find(item => item.textContent === 'Summarize Whole Sheet'));
 await settle(); await settle();
 assert.equal(requests.filter(item => item.path === '/ai').at(-1).body.target_node_id, '');
-await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === '却下'));
-await mode('ビュー');
-await aiChoice('関連アイデア');
+await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === 'Reject'));
+await mode('View');
+await aiChoice('Expand');
 let captures = 0;
 document.querySelector('.sheet-canvas').setPointerCapture = () => captures++;
 document.querySelector('.node-button').dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, button: 0 }));
@@ -340,7 +340,7 @@ await click(document.querySelector('.node-button'));
 await settle(); await settle();
 assert.equal(requests.filter(item => item.path === '/ai').at(-1).body.target_node_id, 'n0');
 assert.equal(requests.filter(item => item.path === '/ai').at(-1).body.mode, 'expand');
-await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === '却下'));
+await click([...document.querySelectorAll('.ai-proposal button')].find(item => item.textContent === 'Reject'));
 results.push('設定保存・メモ送信・AIホイール・全体/部分の対象選択');
 
 // 設定保存が遅くても、古い設定が最後の入力を上書きしない。
@@ -438,12 +438,12 @@ results.push('保存成功でUndo/Redoリセット、保存失敗で保持、AI�
 
 // design-document.md 6.4: モードに応じてカーソルを変える（view=grab、他=crosshair）。
 {
-  await mode('ビュー');
+  await mode('View');
   const canvas = document.querySelector('.sheet-canvas');
   assert.equal(window.getComputedStyle(canvas).cursor, 'grab', 'viewモードはgrabカーソル');
-  await mode('ノード追加');
+  await mode('Add Node');
   assert.equal(window.getComputedStyle(canvas).cursor, 'crosshair', 'view以外は十字カーソル');
-  await mode('ビュー');
+  await mode('View');
   results.push('モード別カーソル表示');
 }
 
@@ -458,7 +458,7 @@ results.push('保存成功でUndo/Redoリセット、保存失敗で保持、AI�
   document.querySelector('.sheet-canvas').dispatchEvent(new WheelEvent('wheel', { bubbles: true, deltaY: 100 }));
   await settle();
   assert(document.querySelector('.radial-wheel'), 'マウスホイール操作でモードホイールが表示される');
-  await click([...document.querySelectorAll('.wheel-entry')].find(item => item.getAttribute('aria-label') === 'ビュー'));
+  await click([...document.querySelectorAll('.wheel-entry')].find(item => item.getAttribute('aria-label') === 'View'));
   results.push('マウスホイールでのモードホイール表示');
 }
 
@@ -502,7 +502,7 @@ results.push('前回シートの自動復元と履歴リセット');
     ? new Response(JSON.stringify({ foo: 'bar' })) : originalFetch(path, options);
   await settings.refreshModels();
   assert.equal(settings.hasError.value, true);
-  assert(settings.status.value.includes('モデル一覧'), 'GET /models不正形式のエラー文言');
+  assert(settings.status.value.includes('model list'), 'GET /models不正形式のエラー文言');
   globalThis.fetch = originalFetch;
 }
 {
@@ -511,7 +511,7 @@ results.push('前回シートの自動復元と履歴リセット');
   globalThis.fetch = async () => { throw new TypeError('network down'); };
   await settings.restore();
   assert.equal(settings.hasError.value, true);
-  assert(settings.status.value.includes('設定を復元できませんでした'), 'GET /stateネットワーク障害のエラー文言');
+  assert(settings.status.value.includes('Failed to restore settings'), 'GET /stateネットワーク障害のエラー文言');
   globalThis.fetch = originalFetch;
 }
 {
@@ -521,7 +521,7 @@ results.push('前回シートの自動復元と履歴リセット');
     ? new Response(JSON.stringify({ sheets: [] })) : originalFetch(path, options);
   await session.openList();
   assert.equal(session.hasError.value, true);
-  assert(session.message.value.includes('シート一覧'), 'GET /sheets不正形式のエラー文言');
+  assert(session.message.value.includes('sheet list'), 'GET /sheets不正形式のエラー文言');
   globalThis.fetch = originalFetch;
 }
 {
@@ -529,7 +529,7 @@ results.push('前回シートの自動復元と履歴リセット');
   stored['bad-title'] = { ...base };
   await session.loadSheet('bad-title');
   assert.equal(session.hasError.value, true);
-  assert(session.message.value.includes('タイトル'), 'GET /sheetタイトル不正のエラー文言');
+  assert(session.message.value.includes('title'), 'GET /sheetタイトル不正のエラー文言');
 }
 {
   const session = useSheetSession();

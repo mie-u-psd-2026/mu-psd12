@@ -30,19 +30,19 @@ function setup(props, { emit }) {
   return { isOpen, handleToggle, handleSelect, handlePrompt, handleRefresh, handleFocusOut, handleClose, handleSave };
 }
 // 右下のモデル選択と、その下のプロンプト領域。
-const template = `<section class="model-settings ai-accent" aria-label="AI設定"
+const template = `<section class="model-settings ai-accent" aria-label="AI Settings"
   @focusout="handleFocusOut" @keydown.esc="handleClose">
   <div class="model-picker">
-    <div v-if="isOpen" class="model-options" aria-label="利用可能なモデル">
-      <p v-if="!models.length">モデルは未取得です</p>
+    <div v-if="isOpen" class="model-options" aria-label="Available Models">
+      <p v-if="!models.length">No models are available.</p>
       <button v-for="model in models" :key="model" type="button" class="text-button" :disabled="isLocked" @click="handleSelect(model)">{{ model }}</button>
-      <button type="button" class="text-button" :disabled="isBusy || isLocked" @click="handleRefresh">{{ isBusy ? '取得中…' : 'モデル一覧を取得' }}</button>
+      <button type="button" class="text-button" :disabled="isBusy || isLocked" @click="handleRefresh">{{ isBusy ? 'Fetching…' : 'Fetch model list' }}</button>
     </div>
-    <button type="button" class="text-button model-toggle" :disabled="isLocked" :aria-expanded="isOpen" @click="handleToggle">{{ currentModel || 'モデルを選択' }} ▴</button>
+    <button type="button" class="text-button model-toggle" :disabled="isLocked" :aria-expanded="isOpen" @click="handleToggle">{{ currentModel || 'Select Model' }} ▴</button>
   </div>
-  <label for="system-prompt">システムプロンプト</label>
-  <textarea id="system-prompt" :value="systemPrompt" :disabled="isLocked" @input="handlePrompt" rows="2" placeholder="AIへの指示を入力…"></textarea>
+  <label for="system-prompt">User Custom Prompt</label>
+  <textarea id="system-prompt" :value="systemPrompt" :disabled="isLocked" @input="handlePrompt" rows="2" placeholder="Enter instructions for the AI…"></textarea>
 <p class="settings-status" :class="{ 'error-message': hasError }" role="status">{{ status }}</p>
-  <button v-if="hasError" type="button" class="text-button" :disabled="isLocked" @click="handleSave">設定の保存を再試行</button>
+  <button v-if="hasError" type="button" class="text-button" :disabled="isLocked" @click="handleSave">Retry Save</button>
 </section>`;
 export default { name, props, emits, setup, template };

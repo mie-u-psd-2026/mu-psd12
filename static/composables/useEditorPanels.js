@@ -36,10 +36,10 @@ export function useEditorPanels(session, wheel) {
     const groups = session.sheetState.groups;
     const start = groupPage * 4;
     const entries = groups.slice(start, start + 4).map(group => ({ value: 'group:' + group.id, label: group.title, color: group.color }));
-    entries.push({ value: 'create', label: '新規グループ', icon: 'plus' });
-    if (groups.some(group => group.members.includes(groupTarget))) entries.push({ value: 'exclude', label: 'グループから除外', icon: 'minus' });
-    if (groupPage > 0) entries.push({ value: 'previous', label: '前のグループ', icon: 'chevron-left' });
-    if (start + 4 < groups.length) entries.push({ value: 'next', label: '次のグループ', icon: 'chevron-right' });
+    entries.push({ value: 'create', label: 'New Group', icon: 'plus' });
+    if (groups.some(group => group.members.includes(groupTarget))) entries.push({ value: 'exclude', label: 'Remove from Group', icon: 'minus' });
+    if (groupPage > 0) entries.push({ value: 'previous', label: 'Previous Group', icon: 'chevron-left' });
+    if (start + 4 < groups.length) entries.push({ value: 'next', label: 'Next Group', icon: 'chevron-right' });
     wheel.close();
     wheel.isKeyboard.value = true;
     wheel.open('group', entries, groupPoint);

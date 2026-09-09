@@ -11,7 +11,7 @@ export function useSheetState() {
     if (!sheetState.nodes.some(node => node.id === parentId)) return null;
 
     const id = nextNodeId(sheetState.nodes);
-    sheetState.nodes.push({ id, kind: 'idea', text: '新しいアイデア', parent: parentId });
+    sheetState.nodes.push({ id, kind: 'idea', text: 'New Idea', parent: parentId });
     return id;
   }
 

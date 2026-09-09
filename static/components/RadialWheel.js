@@ -45,9 +45,9 @@ function setup(props, { emit }) {
 const template = `
   <div class="wheel-backdrop" @click.self="handleClose" @contextmenu.prevent>
     <div ref="menu" class="radial-wheel" :class="{ 'ai-accent': kind === 'ai' }"
-      role="menu" :aria-label="kind === 'ai' ? 'AI機能' : '操作メニュー'"
+      role="menu" :aria-label="kind === 'ai' ? 'AI Features' : 'Action Menu'"
       :style="{ left: center.x + 'px', top: center.y + 'px' }" @keydown="handleKeydown">
-      <span class="wheel-center">{{ kind === 'ai' ? 'AI' : kind === 'group' ? 'グループ' : 'モード' }}</span>
+      <span class="wheel-center">{{ kind === 'ai' ? 'AI' : kind === 'group' ? 'GROUP' : 'MODE' }}</span>
       <button v-for="(entry, index) in items" :key="entry.value" type="button" role="menuitem"
         class="wheel-entry" :class="{ 'is-active': activeIndex === index }" :aria-label="entry.label"
         :style="{ left: entry.x + 'px', top: entry.y + 'px' }" @click.stop="handleSelect(index)">

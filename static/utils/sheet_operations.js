@@ -4,14 +4,14 @@ import { GROUP_COLORS } from './sheet_format.js';
 // IDを受け取り、存在するノードを返す。
 export function findNode(sheet, id) {
   const node = sheet.nodes.find(entry => entry.id === id);
-  if (!node) throw new Error('対象のノードがありません。');
+  if (!node) throw new Error('The target node does not exist.');
   return node;
 }
 
 // ノードIDを受け取り、子孫と接続・所属をまとめて削除する。
 export function removeNode(sheet, id) {
   const node = findNode(sheet, id);
-  if (node.parent === null) throw new Error('テーマノードは削除できません。');
+  if (node.parent === null) throw new Error('The theme node cannot be deleted.');
   const children = new Map();
   sheet.nodes.forEach(entry => {
     if (!children.has(entry.parent)) children.set(entry.parent, []);
@@ -34,9 +34,9 @@ export function removeNode(sheet, id) {
 export function addLink(sheet, a, b, comment = '') {
   findNode(sheet, a);
   findNode(sheet, b);
-  if (a === b) throw new Error('同じノード同士は接続できません。');
+  if (a === b) throw new Error('Cannot connect a node to itself.');
   if (sheet.links.some(link => (link.a === a && link.b === b) || (link.a === b && link.b === a))) {
-    throw new Error('このノード同士は既に接続されています。');
+    throw new Error('These nodes are already connected.');
   }
   sheet.links.push({ id: crypto.randomUUID(), a, b, comment });
 }
@@ -49,8 +49,8 @@ export function detachMembers(sheet, members) {
 
 // メンバー、タイトル、コメント、色を受け取り、グループを追加する。
 export function addGroup(sheet, members, title, comment, color) {
-  if (!title.trim()) throw new Error('グループ名を入力してください。');
-  if (!members.length) throw new Error('グループに追加するノードを選択してください。');
+  if (!title.trim()) throw new Error('Please enter a group name.');
+  if (!members.length) throw new Error('Please select nodes to add to the group.');
   members.forEach(id => findNode(sheet, id));
   detachMembers(sheet, members);
   sheet.groups.push({ id: crypto.randomUUID(), members: [...new Set(members)], title: title.trim(),
@@ -61,7 +61,7 @@ export function addGroup(sheet, members, title, comment, color) {
 export function moveToGroup(sheet, nodeId, groupId) {
   findNode(sheet, nodeId);
   const group = sheet.groups.find(entry => entry.id === groupId);
-  if (!group) throw new Error('対象のグループがありません。');
+  if (!group) throw new Error('The target group does not exist.');
   detachMembers(sheet, [nodeId]);
   group.members.push(nodeId);
 }
@@ -69,14 +69,14 @@ export function moveToGroup(sheet, nodeId, groupId) {
 // 複数ノードを指定されたノードへ統合し、子・エッジ・所属をつなぎ直す。
 export function mergeNodes(sheet, ids, merged) {
   const selected = new Set(ids);
-  if (selected.size < 2) throw new Error('統合には2つ以上のノードが必要です。');
+  if (selected.size < 2) throw new Error('At least two nodes are required to merge.');
   const sources = ids.map(id => findNode(sheet, id));
-  if (sources.some(node => node.parent === null)) throw new Error('テーマノードは統合できません。');
-  if (sheet.nodes.some(node => node.id === merged.id)) throw new Error('統合先IDが重複しています。');
+  if (sources.some(node => node.parent === null)) throw new Error('The theme node cannot be merged.');
+  if (sheet.nodes.some(node => node.id === merged.id)) throw new Error('The merge target ID is already in use.');
   let parent = merged.parent;
   const visited = new Set();
   while (selected.has(parent)) {
-    if (visited.has(parent)) throw new Error('統合先の親子関係が不正です。');
+    if (visited.has(parent)) throw new Error('The merge target has an invalid parent/child relationship.');
     visited.add(parent);
     parent = findNode(sheet, parent).parent;
   }

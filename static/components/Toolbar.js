@@ -15,13 +15,13 @@ const emits = ['newSheet', 'openSheetList', 'save', 'export', 'import', 'undo', 
 
 // 表示順とFeather Iconsの識別子。
 const ACTIONS = [
-  { event: 'newSheet', label: '新規', icon: 'file-plus' },
-  { event: 'openSheetList', label: '読込', icon: 'folder' },
-  { event: 'save', label: '保存', icon: 'save' },
-  { event: 'export', label: 'エクスポート', icon: 'download' },
-  { event: 'import', label: 'インポート', icon: 'upload' },
-  { event: 'undo', label: '元に戻す', icon: 'rotate-ccw' },
-  { event: 'redo', label: 'やり直す', icon: 'rotate-cw' },
+  { event: 'newSheet', label: 'Create', icon: 'file-plus' },
+  { event: 'openSheetList', label: 'Load', icon: 'folder' },
+  { event: 'save', label: 'Save', icon: 'save' },
+  { event: 'export', label: 'Export', icon: 'download' },
+  { event: 'import', label: 'Import', icon: 'upload' },
+  { event: 'undo', label: 'Undo', icon: 'rotate-ccw' },
+  { event: 'redo', label: 'Redo', icon: 'rotate-cw' },
 ];
 
 // 操作の表示データと、履歴状態を確認するハンドラを返す。
@@ -46,7 +46,7 @@ function setup(props, { emit }) {
 
 // アイコンと、ホバーまたはキーボードフォーカス時の説明。
 const template = `
-  <nav class="sheet-toolbar" aria-label="シート操作">
+  <nav class="sheet-toolbar" aria-label="Sheet Actions">
     <span v-for="action in actions" :key="action.event" class="toolbar-item">
       <button
         type="button"

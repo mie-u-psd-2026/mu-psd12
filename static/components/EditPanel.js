@@ -4,7 +4,7 @@ import { GROUP_COLORS } from '../utils/sheet_format.js';
 // コンポーネントの識別名。
 const name = 'EditPanel';
 // 表示位置と編集対象。
-const props = { heading: { type: String, default: '編集' }, hasTitle: Boolean, title: { type: String, default: '' },
+const props = { heading: { type: String, default: 'Edit' }, hasTitle: Boolean, title: { type: String, default: '' },
   comment: { type: String, default: '' }, color: { type: String, default: '#d4e4f7' },
   canDelete: Boolean, x: { type: Number, default: 160 }, y: { type: Number, default: 160 } };
 // 確定・削除・閉じる操作。
@@ -34,14 +34,14 @@ function setup(props, { emit }) {
 const template = `<form ref="panel" class="edit-panel" :style="{ left: x + 'px', top: y + 'px' }"
   :aria-label="heading" @submit.prevent="handleSave" @keydown.esc.stop="handleClose" @pointerdown.stop>
   <h2>{{ heading }}</h2>
-  <label v-if="hasTitle">タイトル<input v-model="draftTitle" required></label>
-  <label>コメント<textarea v-model="draftComment" rows="3"></textarea></label>
-  <div v-if="hasTitle" class="color-options" aria-label="グループ色">
-    <button v-for="(color, index) in colors" :key="color" type="button" :aria-label="'グループ色 ' + (index + 1)"
+  <label v-if="hasTitle">Title<input v-model="draftTitle" required></label>
+  <label>Comment<textarea v-model="draftComment" rows="3"></textarea></label>
+  <div v-if="hasTitle" class="color-options" aria-label="Group Color">
+    <button v-for="(color, index) in colors" :key="color" type="button" :aria-label="'Group Color ' + (index + 1)"
       :aria-pressed="draftColor === color" :style="{ backgroundColor: color }" @click="handleColor(color)"></button>
   </div>
-  <div class="edit-actions"><button type="button" class="text-button" @click="handleClose">キャンセル</button>
-    <button v-if="canDelete" type="button" class="text-button" @click="handleDelete">削除</button>
-    <button type="submit" class="text-button" :disabled="hasTitle && !draftTitle.trim()">確定</button></div>
+  <div class="edit-actions"><button type="button" class="text-button" @click="handleClose">Cancel</button>
+    <button v-if="canDelete" type="button" class="text-button" @click="handleDelete">Delete</button>
+    <button type="submit" class="text-button" :disabled="hasTitle && !draftTitle.trim()">Submit</button></div>
 </form>`;
 export default { name, props, emits, setup, template };
