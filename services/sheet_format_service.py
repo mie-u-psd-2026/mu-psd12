@@ -83,7 +83,7 @@ def parse_llm_response(text):
                 'text': _unescape_field(parts[3]),
                 'parent': parts[2] if parts[2] != '-' else None,
             })
-        elif op in ('N-', 'N~', 'L+', 'L-', 'G+', 'M') and len(parts) >= 2:
+        elif op in ('N-', 'N~', 'L+', 'L-', 'G+', 'M', 'T+') and len(parts) >= 2:
             ops.append(line)
         # 壊れた行は例外を投げず読み飛ばす
     return ops, ghosts

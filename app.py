@@ -94,6 +94,7 @@ def request_ai():
     sheet_id = payload.get('sheet_id')
     target_node_id = payload.get('target_node_id')
     system_prompt = payload.get('system_prompt', '')
+    text = payload.get('text', '')
 
     if not model_name or not mode or not sheet_id or target_node_id is None:
         return error_response('validation', 'model_name, mode, sheet_id, target_node_idが必要です')
@@ -110,6 +111,8 @@ def request_ai():
             serialized,
             target_node_id,
             system_prompt,
+            sheet_id=sheet_id,
+            text=text,
         )
     except ai_service.LLMUnavailableError as e:
         return error_response('llm_unavailable', str(e))

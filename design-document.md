@@ -426,10 +426,11 @@ AIがトランザクションを提案する際は、同じフィールド形状
 N+|newId|parentId|text            ノード追加（新規idはnew接頭辞。コミット時に実IDへ変換）
 N-|id                             ノード削除
 N~|id|text                        テキスト編集
-L+|a|b|comment                    間接エッジ追加
+L+|newId|nodeA|nodeB|comment      間接エッジ追加
 L-|id                             間接エッジ削除
 G+|newId|memberIds|title|comment  グループ新規作成
 M|id,id|text                      ノード統合
+T+|newId|title|body               ノート作成
 ```
 
 - `text`/`comment`内に`|`や改行が含まれる場合は、シリアライズ前に安全な文字へ置換する

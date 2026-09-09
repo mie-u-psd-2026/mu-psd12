@@ -23,3 +23,5 @@ OLLAMA_BASE_URL = os.environ.get('OLLAMA_BASE_URL', 'http://localhost:11434/v1')
 OLLAMA_API_KEY = os.environ.get('OLLAMA_API_KEY', 'ollama')
 # LLM推論のタイムアウト秒数。
 LLM_TIMEOUT = float(os.environ.get('LLM_TIMEOUT', '120'))
+# デバッグ用: ON時はLLM応答をストリーミングでサーバーコンソールに逐次出力する。
+LLM_DEBUG_STREAM = os.environ.get('LLM_DEBUG_STREAM', 'false').lower() in ('true', '1', 'yes', 'on')

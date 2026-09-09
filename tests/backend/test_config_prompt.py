@@ -1,4 +1,6 @@
 # 環境設定と組込プロンプトの回帰テスト。
+from contextlib import redirect_stdout
+import io
 import os
 from pathlib import Path
 import runpy
@@ -64,11 +66,18 @@ class ConfigTest(unittest.TestCase):
 
 
 class PromptTest(unittest.TestCase):
+    # .envの実際の値（LLM_DEBUG_STREAM等）に依存しないよう、既定でOFFに固定する。
+    def setUp(self):
+        patcher = patch.object(config, 'LLM_DEBUG_STREAM', False)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
     # 基本プロンプトの操作形式と出力制約を確認する。
     def testBaseFormat(self):
         for token in ('N+|newId|parentId|text', 'N-|id', 'N~|id|text',
                       'L+|newId|nodeA|nodeB|comment', 'L-|id',
                       'G+|newId|memberIds(,区切り)|title|comment', 'M|id,id|text',
+                      'T+|newId|title|body',
                       'text/commentに|や改行', 'new接頭辞', '操作行のみ'):
             with self.subTest(token=token):
                 self.assertIn(token, ai_service._SYSTEM_BASE)
@@ -77,7 +86,8 @@ class PromptTest(unittest.TestCase):
     def testModeInstructions(self):
         modes = {'expand': '子ノードを3つ程度', 'newview': '根直下のノードを2つ程度',
                  'link': '間接エッジで接続', 'merge': '兄弟ノードを統合',
-                 'group': '子孫を意味的にまとめて', 'note': 'シート全体の要約'}
+                 'group': '子孫を意味的にまとめて', 'note': 'シート全体の要約',
+                 'mutter': 'ユーザーの入力（ひとりごと）を読み取り'}
         for mode, instruction in modes.items():
             with self.subTest(mode=mode):
                 prompt = ai_service._build_prompt(mode, 'N|n0|-|テーマ', 'n0')
@@ -115,6 +125,66 @@ class PromptTest(unittest.TestCase):
                 self.assertIn('N|n0|-|テーマ', messages[-1]['content'])
                 self.assertIn('子ノードを3つ程度', messages[-1]['content'])
                 self.assertEqual(proposal['ghosts'][0]['text'], 'アイデア')
+
+    # mutterモードのtextがプロンプトに含まれることを確認する。
+    def testMutterTextIncludedInPrompt(self):
+        prompt = ai_service._build_prompt('mutter', 'N|n0|-|テーマ', '', 'これはひとりごとです')
+        self.assertIn('## ユーザーの入力\nこれはひとりごとです', prompt)
+
+    # textが空の場合、入力セクションを付与しないことを確認する。
+    def testTextOmittedWhenEmpty(self):
+        prompt = ai_service._build_prompt('expand', 'N|n0|-|テーマ', 'n0')
+        self.assertNotIn('## ユーザーの入力', prompt)
+
+    # request_transaction経由でtextがLLMへのメッセージに渡ることを確認する。
+    def testMutterTextReachesLlm(self):
+        response = SimpleNamespace(choices=[SimpleNamespace(message=SimpleNamespace(content=''))])
+        with patch.object(ai_service.client.chat.completions, 'create', return_value=response) as create:
+            ai_service.request_transaction(
+                'test-model', 'mutter', 'N|n0|-|テーマ', '', '', text='これはひとりごとです')
+        messages = create.call_args.kwargs['messages']
+        self.assertIn('これはひとりごとです', messages[-1]['content'])
+
+    # noteモードでLLMがT+行を返した場合、proposal['note']に反映されることを確認する。
+    def testNoteProposal(self):
+        response = SimpleNamespace(choices=[
+            SimpleNamespace(message=SimpleNamespace(content='T+|new1|要約|本文です'))])
+        with patch.object(ai_service.client.chat.completions, 'create', return_value=response):
+            proposal = ai_service.request_transaction(
+                'test-model', 'note', 'N|n0|-|テーマ', '', '')
+        self.assertEqual(proposal['note'], {'id': 'new1', 'title': '要約', 'body': '本文です'})
+
+    # LLM_DEBUG_STREAM=false時はstream=Trueを渡さないことを確認する。
+    def testDebugStreamDisabledByDefault(self):
+        response = SimpleNamespace(choices=[
+            SimpleNamespace(message=SimpleNamespace(content='N+|new1|n0|アイデア'))])
+        with patch.object(config, 'LLM_DEBUG_STREAM', False):
+            with patch.object(ai_service.client.chat.completions, 'create',
+                              return_value=response) as create:
+                ai_service.request_transaction('test-model', 'expand', 'N|n0|-|テーマ', 'n0', '')
+        self.assertNotIn('stream', create.call_args.kwargs)
+
+    # LLM_DEBUG_STREAM=true時はstream=Trueで呼び出し、応答をコンソールへ逐次出力することを確認する。
+    def testDebugStreamOutputsChunksToConsole(self):
+        chunks = [
+            SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='N+|new1'))]),
+            SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(content='|n0|アイデア'))]),
+        ]
+        with patch.object(config, 'LLM_DEBUG_STREAM', True):
+            with patch.object(ai_service.client.chat.completions, 'create',
+                              return_value=iter(chunks)) as create:
+                output = io.StringIO()
+                with redirect_stdout(output):
+                    proposal = ai_service.request_transaction(
+                        'test-model', 'expand', 'N|n0|-|テーマ', 'n0', '', sheet_id='sheet1')
+        self.assertIs(create.call_args.kwargs['stream'], True)
+        printed = output.getvalue()
+        self.assertIn('sheet=sheet1 mode=expand target=n0', printed)
+        self.assertIn('[LLM prompt:system]', printed)
+        self.assertIn(ai_service._SYSTEM_BASE, printed)
+        self.assertIn('N|n0|-|テーマ', printed)
+        self.assertIn('N+|new1|n0|アイデア', printed)
+        self.assertEqual(proposal['ghosts'][0]['text'], 'アイデア')
 
 
 if __name__ == '__main__':

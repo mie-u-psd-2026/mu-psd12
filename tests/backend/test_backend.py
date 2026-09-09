@@ -58,9 +58,10 @@ class SheetFormatServiceTest(unittest.TestCase):
             'G+|newG|n0,n1|新グループ|メモ\n'
             'M|n0,n1|統合テキスト\n'
             'N~|n1|編集後\n'
+            'T+|newT|要約|本文\n'
         )
         ops, ghosts = sheet_format_service.parse_llm_response(text)
-        self.assertEqual(len(ops), 6)
+        self.assertEqual(len(ops), 7)
         self.assertEqual(len(ghosts), 1)
         self.assertEqual(ghosts[0]['text'], '新しいアイデア')
         self.assertEqual(ghosts[0]['parent'], 'n0')
@@ -257,6 +258,20 @@ class ApiErrorFormatTest(unittest.TestCase):
             resp = client.post('/ai', json={'model_name': 'local-model', 'mode': 'note',
                                              'sheet_id': sheet_id, 'target_node_id': ''})
         self.assertEqual(resp.status_code, 200)
+
+    def test_ai_forwards_mutter_text(self):
+        # design-document.md 4.7: ひとりごとメモの本文はAIに渡す必要がある。
+        app = self._patch_storage()
+        client = app.test_client()
+        sheet_id = client.post('/sheet', json={'title': 'A'}).get_json()['id']
+        proposal = {'title': 'AI提案', 'ops': [], 'ghosts': [], 'removes': [],
+                    'links': [], 'group': None, 'note': None, 'merge': False}
+        with patch.object(ai_service, 'request_transaction', return_value=proposal) as mocked:
+            resp = client.post('/ai', json={'model_name': 'local-model', 'mode': 'mutter',
+                                             'sheet_id': sheet_id, 'target_node_id': '',
+                                             'text': 'これはひとりごとです'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(mocked.call_args.kwargs['text'], 'これはひとりごとです')
 
     def test_delete_missing_sheet_returns_not_found(self):
         app = self._patch_storage()

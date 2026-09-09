@@ -18,6 +18,7 @@ _MODE_LABELS = {
     'merge': 'ノード統合',
     'group': 'グループ化',
     'note': 'ノート生成',
+    'mutter': 'ひとりごと反映',
 }
 
 # AIモードごとの指示
@@ -28,6 +29,7 @@ _MODE_INSTRUCTIONS = {
     'merge': '指定ノードと重複・類似の兄弟ノードを統合してください。',
     'group': '指定ノードとその子孫を意味的にまとめてグループ化してください。',
     'note': 'シート全体の要約をノートとして作成してください。',
+    'mutter': 'ユーザーの入力（ひとりごと）を読み取り、シートに新しいノードやノートとして反映する提案をしてください。',
 }
 
 # システムプロンプトの骨子
@@ -43,14 +45,15 @@ _SYSTEM_BASE = (
     '- L+|newId|nodeA|nodeB|comment — 間接エッジ追加\n'
     '- L-|id — 間接エッジ削除\n'
     '- G+|newId|memberIds(,区切り)|title|comment — グループ新規作成\n'
-    '- M|id,id|text — ノード統合\n\n'
+    '- M|id,id|text — ノード統合\n'
+    '- T+|newId|title|body — ノート作成\n\n'
     'text/commentに|や改行が含まれる場合は使用しないでください。\n'
     '新規IDは「new1」「new2」のようにnew接頭辞で始めてください。\n'
     '余計な説明やコードブロック記号は出力せず、操作行のみを返してください。\n'
 )
 
 
-def _build_prompt(mode, serialized_sheet, target_node_id):
+def _build_prompt(mode, serialized_sheet, target_node_id, text=''):
     """LLMへのプロンプトを組み立てる"""
     instruction = _MODE_INSTRUCTIONS.get(mode, '適切な提案を行ってください。')
     lines = [
@@ -61,6 +64,8 @@ def _build_prompt(mode, serialized_sheet, target_node_id):
         serialized_sheet,
         '```',
     ]
+    if text:
+        lines.append(f'## ユーザーの入力\n{text}')
     return '\n'.join(lines)
 
 
@@ -75,6 +80,18 @@ def _parse_link(line):
         'a': parts[2],
         'b': parts[3],
         'comment': comment,
+    }
+
+
+def _parse_note(line):
+    """T+|newId|title|body 形式からノートオブジェクトを生成する"""
+    parts = line.split('|')
+    if len(parts) < 4:
+        return None
+    return {
+        'id': parts[1],
+        'title': sheet_format_service._unescape_field(parts[2]),
+        'body': sheet_format_service._unescape_field(parts[3]),
     }
 
 
@@ -118,6 +135,10 @@ def _build_proposal(ops, ghosts, mode):
                 }
         elif op == 'M':
             merge = True
+        elif op == 'T+':
+            parsed_note = _parse_note(op_line)
+            if parsed_note:
+                note = parsed_note
 
     return {
         'title': f'AI提案（{_MODE_LABELS.get(mode, mode)}）',
@@ -146,21 +167,38 @@ def list_models():
         raise LLMUnavailableError('Ollamaのモデル一覧取得に失敗しました')
 
 
-def request_transaction(model_name, mode, serialized_sheet, target_node_id, system_prompt):
-    """LLMにトランザクションを提案させ、フロントエンド向けの提案形状に変換して返す"""
-    prompt = _build_prompt(mode, serialized_sheet, target_node_id)
-    messages = [
-        {'role': 'system', 'content': system_prompt if system_prompt else prompt},
-    ]
-    if system_prompt:
-        messages.append({'role': 'user', 'content': prompt})
+def _request_llm_content(model_name, messages, sheet_id, mode, target_node_id):
+    """LLMを呼び出し応答テキストを返す。
 
+    LLM_DEBUG_STREAM有効時はstream=Trueで呼び出し、受信したチャンクを
+    デバッグ用にサーバーコンソールへ逐次出力する（レスポンス形状・パース処理は変えない）。
+    """
     try:
+        if config.LLM_DEBUG_STREAM:
+            print(f'[LLM stream] sheet={sheet_id} mode={mode} target={target_node_id}', flush=True)
+            for message in messages:
+                print(f"[LLM prompt:{message['role']}]\n{message['content']}", flush=True)
+            parts = []
+            stream = client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                timeout=LLM_TIMEOUT,
+                stream=True,
+            )
+            for chunk in stream:
+                delta = chunk.choices[0].delta.content if chunk.choices else None
+                if delta:
+                    print(delta, end='', flush=True)
+                    parts.append(delta)
+            print(flush=True)
+            return ''.join(parts)
+
         response = client.chat.completions.create(
             model=model_name,
             messages=messages,
             timeout=LLM_TIMEOUT,
         )
+        return response.choices[0].message.content or ''
     except APIConnectionError:
         raise LLMUnavailableError('Ollamaに接続できません')
     except APITimeoutError:
@@ -168,7 +206,17 @@ def request_transaction(model_name, mode, serialized_sheet, target_node_id, syst
     except APIStatusError as e:
         raise LLMUnavailableError(f'LLM呼び出しに失敗しました: {e.message}')
 
-    content = response.choices[0].message.content or ''
+
+def request_transaction(model_name, mode, serialized_sheet, target_node_id, system_prompt, sheet_id=None, text=''):
+    """LLMにトランザクションを提案させ、フロントエンド向けの提案形状に変換して返す"""
+    prompt = _build_prompt(mode, serialized_sheet, target_node_id, text)
+    messages = [
+        {'role': 'system', 'content': system_prompt if system_prompt else prompt},
+    ]
+    if system_prompt:
+        messages.append({'role': 'user', 'content': prompt})
+
+    content = _request_llm_content(model_name, messages, sheet_id, mode, target_node_id)
     ops, ghosts = sheet_format_service.parse_llm_response(content)
     return _build_proposal(ops, ghosts, mode)
 
