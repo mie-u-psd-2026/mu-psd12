@@ -91,6 +91,7 @@
     }
 
     .toolbar-item { position: relative; }
+    .toolbar-item:hover { background-color: var(--mono-300); border-radius: 4px; }
 
     .toolbar-button {
       display: inline-flex;
@@ -187,6 +188,7 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .text-button:not(:disabled) { text-decoration: underline; text-underline-offset: 4px; }
 .text-button:hover:not(:disabled) { opacity: .7; }
 .icon-button { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
+.icon-button:hover { background-color: var(--mono-300); border-radius: 4px; }
 .muted { color: var(--mono-500); font-size: 12px; }
 .ai-accent { color: var(--ai-cyan-dim); }
 .vignette { position: absolute; inset: 0; z-index: 1; pointer-events: none;
@@ -200,7 +202,7 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .right-tools { right: 32px; }
 .notes-panel { max-height: 24vh; overflow-y: auto; margin-bottom: 32px; }
 .notes-panel details { margin-top: 16px; }
-.notes-panel summary { cursor: pointer; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.notes-panel summary { cursor: pointer; font-size: 13px;}
 .note-body { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.6; }
 .mutter-input label, .model-settings label { display: block; font-size: 12px; margin-bottom: 8px; }
 .mutter-input textarea, .model-settings textarea {
@@ -226,7 +228,7 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .sheet-list p { font-size: 13px; }
 .sheet-list-entry { display: block; width: 100%; padding: 16px 0; text-align: left; color: inherit;
   border: 0; background: transparent; cursor: pointer; }
-.sheet-list-entry strong { display: block; overflow-wrap: anywhere; text-decoration: underline; text-underline-offset: 3px; }
+.sheet-list-entry strong { display: block; overflow-wrap: anywhere;}
 .sheet-list-entry time { display: block; margin-top: 8px; font-size: 11px; color: var(--mono-500); }
 .wheel-backdrop { position: fixed; inset: 0; z-index: 10; }
 .radial-wheel { position: absolute; width: 0; height: 0; }
@@ -298,3 +300,8 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
 .group-list { max-height: 18vh; overflow-y: auto; margin-bottom: 24px; }
 .group-list .text-button { display: flex; align-items: center; gap: 8px; font-size: 12px; text-align: left; }
 .group-list .group-dot { width: 16px; height: 16px; flex-shrink: 0; }
+
+.list-child:hover { background-color: var(--mono-300); }
+.model-options .list-child { text-decoration-line: none; }
+
+.float-right { float: right; text-align: right !important; font-size: 14px;}

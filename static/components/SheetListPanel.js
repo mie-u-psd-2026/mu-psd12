@@ -34,10 +34,10 @@ const template = `
     <p v-if="isBusy">Loading…</p>
     <p v-else-if="hasError">Failed to load lists.<button type="button" class="text-button" @click="handleRetry">Retry</button></p>
     <p v-else-if="!sheets.length">No Sheets are here now.</p>
-    <ul v-else><li v-for="sheet in sheets" :key="sheet.id">
+    <ul v-else><li v-for="sheet in sheets" :key="sheet.id" class="list-child">
       <button type="button" class="sheet-list-entry" :disabled="isBusy" @click="handleSelect(sheet.id)">
         <strong>{{ sheet.title }}</strong><time>{{ formatDate(sheet.updated_at) }}</time>
       </button><button type="button" class="icon-button" :aria-label="'Delete sheet: ' + sheet.title" :disabled="isBusy" @click="handleDelete(sheet.id)"><app-icon icon="trash-2" label="Delete"></app-icon></button></li></ul>
-    <button type="button" class="text-button" :disabled="isBusy" @click="handleCreate">Create New Sheet</button>
+    <button type="button" class="text-button float-right" :disabled="isBusy" @click="handleCreate">Create New Sheet</button>
   </section>`;
 export default { name, props, emits, components: { AppIcon }, setup, template };
