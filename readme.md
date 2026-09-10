@@ -8,6 +8,26 @@ AIのサポート機能がついたブレインストーミングのシート管
 - バックエンド: Python, Flask, OpenAI SDK経由でローカルのOllamaを利用
 - DB: sqlite
 
+## システム構成
+
+```mermaid
+flowchart LR
+  CDN["CDN\nVue.js / Feather Icons"]
+  FE["フロントエンド\nVue.js（ブラウザ）"]
+  BE["バックエンド\nFlask（REST API）"]
+  DB[("SQLite\nsheets / app_state")]
+  Files[("JSONファイル\n/storage/sheets/*.json")]
+  Ollama["ローカルLLM\nOllama（OpenAI互換API）"]
+
+  FE -- "初回読み込み" --> CDN
+  FE -- "REST API" --> BE
+  BE -- "メタデータ" --> DB
+  BE -- "シート本体" --> Files
+  BE -- "OpenAI SDK" --> Ollama
+```
+
+詳細は [design-document.md](design-document.md) の5.1を参照してください。
+
 # 環境
 - Vscode
 - OpenCode
