@@ -1,4 +1,4 @@
-# テスト仕様書: AIサポート付きブレストアプリ
+# テスト仕様書: brAIn Storming
 
 仕様の詳細は [design-document.md](design-document.md) を参照する。テスト結果は本書に書かず [tests/result/](tests/result/) に記録する。
 

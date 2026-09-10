@@ -204,7 +204,12 @@ const template = `<main class="app-root" @pointerdown="handlePointerDown">
       @node-removed="handleNodeRemoved" @link-added="handleLinkAdded" @link-comment-changed="handleLinkCommentChanged"
       @link-delete-requested="handleLinkDeleteRequested" @group-requested="handleGroupRequested"
       @edit-requested="handleEditRequested" @target-selected="handleTargetSelected" @notice="handleNotice"></sheet-canvas>
-    <header class="app-header"><h1 class="app-title">AI-Supported Brainstorm</h1>
+    <header class="app-header">
+      <h1 class="app-title">
+        &ltbr/&gt<br/>
+        <span>AI</span>\\n<br/>
+        Storming
+      </h1>
       <mode-hud :mode="mode" @wheel-requested="handleOpenWheel"></mode-hud></header>
   </div>
   <div class="sheet-header" :inert="!!pendingAction">

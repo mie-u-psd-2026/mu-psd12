@@ -1,4 +1,4 @@
-# AIサポート付きブレストアプリ
+# brAIn Storming
 
 # 概要
 
