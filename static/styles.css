@@ -244,6 +244,7 @@ h2 { margin: 0 0 16px; font-size: 14px; font-weight: 600; }
   box-shadow: 0 0 10px rgba(0, 0, 0, .25), 0 2px 6px rgba(0, 0, 0, .2); }
 .ai-accent .wheel-entry:hover { background: #d7fbff; color: var(--ai-cyan-dim); }
 .ai-accent .wheel-entry.is-active { background: var(--ai-cyan); color: white; }
+.ai-accent .wheel-entry.wheel-entry.is-active .wheel-label { color: var(--ai-cyan-dim) }
 .wheel-label { position: absolute; top: 44px; left: 50%; transform: translateX(-50%);
   font-size: 11px; white-space: nowrap; opacity: 0; pointer-events: none; background: transparent; padding: 4px; }
 .wheel-entry:hover .wheel-label, .wheel-entry:focus-visible .wheel-label, .wheel-entry.is-active .wheel-label { opacity: 1; }
